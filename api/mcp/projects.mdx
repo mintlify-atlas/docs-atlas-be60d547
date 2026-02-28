@@ -266,3 +266,153 @@ get_current_project()
 # Get specific project info
 get_current_project(project="work-docs")
 ```
+
+---
+
+## list_workspaces
+
+List available cloud workspaces (tenant_id, type, role, and name).
+
+```python
+async def list_workspaces(
+    output_format: Literal["text", "json"] = "text",
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="output_format" type="string" default="text">
+  Response format:
+  - `text` - Human-readable workspace list
+  - `json` - Structured workspace metadata
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string | dict">
+  **Text format:**
+  - List of available workspaces with tenant_id, type, and role
+  - Usage guidance for workspace parameter
+  
+  **JSON format:**
+  ```json
+  {
+    "workspaces": [
+      {
+        "tenant_id": "tenant-uuid",
+        "name": "workspace-name",
+        "workspace_type": "personal",
+        "role": "owner",
+        "organization_id": "org-uuid",
+        "has_active_subscription": true
+      }
+    ],
+    "count": 1
+  }
+  ```
+</ResponseField>
+
+### Workspace Types
+
+- **personal** - Individual user workspace
+- **organization** - Organization workspace with multiple members
+
+### Workspace Roles
+
+- **owner** - Full control over workspace
+- **admin** - Administrative access
+- **member** - Standard access
+
+### Examples
+
+```python
+# List all workspaces (text)
+list_workspaces()
+
+# Get structured workspace data
+list_workspaces(output_format="json")
+```
+
+### Use Cases
+
+- Discover available cloud workspaces for current user
+- Find workspace tenant_id for use in other tools
+- Check subscription status for workspaces
+- Verify workspace access and role
+
+---
+
+## cloud_info
+
+Return optional Basic Memory Cloud information and setup guidance.
+
+```python
+def cloud_info() -> str
+```
+
+### Returns
+
+<ResponseField name="result" type="string">
+  Markdown-formatted content with:
+  - Cloud features overview
+  - Setup instructions
+  - Subscription information
+  - Getting started guide
+</ResponseField>
+
+### Examples
+
+```python
+# Get cloud information
+cloud_info()
+```
+
+### Use Cases
+
+- Learn about cloud features
+- Get setup instructions
+- Understand subscription tiers
+- Find cloud getting started guide
+
+<Info>
+This is a discovery tool - no parameters required. Content is loaded from static resource file.
+</Info>
+
+---
+
+## release_notes
+
+Return the latest product release notes for optional user review.
+
+```python
+def release_notes() -> str
+```
+
+### Returns
+
+<ResponseField name="result" type="string">
+  Markdown-formatted release notes including:
+  - New features
+  - Bug fixes
+  - Breaking changes
+  - Migration guides
+</ResponseField>
+
+### Examples
+
+```python
+# Get latest release notes
+release_notes()
+```
+
+### Use Cases
+
+- Check what's new in latest version
+- Review breaking changes
+- Find migration instructions
+- Stay updated on product improvements
+
+<Info>
+This is a discovery tool - no parameters required. Content is loaded from static resource file.
+</Info>

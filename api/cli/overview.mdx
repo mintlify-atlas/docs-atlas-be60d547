@@ -34,6 +34,26 @@ bm <command> --help
 
 The CLI is organized into several command groups:
 
+### Status & Diagnostics
+
+Check sync status and run consistency checks:
+
+```bash
+bm status [--project <name>]    # Check sync status
+bm doctor [--local|--cloud]     # Run consistency checks
+```
+
+**`bm status`** - Shows sync status including:
+- Pending file changes
+- New, modified, and deleted files
+- Sync statistics
+
+**`bm doctor`** - Runs end-to-end consistency checks:
+- Creates temporary project
+- Tests file → database → file round-trip
+- Validates note creation, search, and sync
+- Cleans up automatically
+
 ### Project Management
 
 Manage multiple Basic Memory projects:
