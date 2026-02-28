@@ -1,0 +1,323 @@
+---
+title: Cloud Authentication
+description: How to authenticate with Basic Memory Cloud using OAuth and API keys
+---
+
+## Overview
+
+Basic Memory Cloud supports two authentication methods:
+
+1. **OAuth 2.0** - Interactive browser-based authentication using WorkOS AuthKit
+2. **API Keys** - Long-lived tokens for CLI automation and cloud project routing
+
+<Warning>
+  Cloud authentication requires an active subscription. The authentication process will verify your subscription status.
+</Warning>
+
+## OAuth Authentication
+
+OAuth is the primary authentication method for interactive CLI usage.
+
+### Login Process
+
+Authenticate using the device authorization flow:
+
+```bash
+bm cloud login
+```
+
+This command:
+1. Generates a device code
+2. Opens your browser for authentication
+3. Displays a user code for manual entry if needed
+4. Polls for authorization completion
+5. Stores tokens locally at `~/.basic-memory/.cloud_tokens.json`
+6. Verifies subscription access
+
+**Example output:**
+```
+Opening browser for authentication...
+User code: ABCD-EFGH
+
+Waiting for authentication...
+✓ Authentication successful
+
+Verifying subscription access...
+✓ Cloud authentication successful
+Cloud host ready: https://api.basicmemory.com
+```
+
+### Subscription Verification
+
+If you don't have an active subscription, you'll see:
+
+```
+Subscription Required
+
+This feature requires an active Basic Memory subscription.
+
+OSS discount code: BMFOSS (20% off for 3 months)
+
+Subscribe at: https://basicmemory.com/subscribe
+
+Once you have an active subscription, run bm cloud login again.
+```
+
+### Logout
+
+Remove stored OAuth tokens:
+
+```bash
+bm cloud logout
+```
+
+<Note>
+  API keys (if configured) remain available after logout and continue to work for cloud project routing.
+</Note>
+
+### Check Authentication Status
+
+Verify your authentication state and cloud connectivity:
+
+```bash
+bm cloud status
+```
+
+**Example output:**
+```
+Cloud Authentication Status
+  Host: https://api.basicmemory.com
+  API Key: configured
+  OAuth: token valid
+
+Checking cloud instance health...
+✓ Cloud instance is healthy
+  Status: healthy
+  Version: 0.15.0
+  Timestamp: 2026-02-28T10:30:00Z
+
+To sync projects, use: bm project bisync --name <project>
+```
+
+## API Key Authentication
+
+API keys provide long-lived authentication for:
+- CLI automation and scripts
+- Per-project cloud routing
+- Scenarios where OAuth is impractical
+
+### Creating API Keys
+
+#### Method 1: Via CLI (requires OAuth first)
+
+Create an API key through the cloud API:
+
+```bash
+# Login with OAuth first
+bm cloud login
+
+# Create and save API key
+bm cloud api-key create "my-laptop"
+```
+
+**Output:**
+```
+Creating API key 'my-laptop'...
+✓ API key 'my-laptop' created and saved
+Projects set to cloud mode will use this key for authentication
+Set a project to cloud mode: bm project set-cloud <name>
+```
+
+#### Method 2: Save Existing Key
+
+If you already have an API key (e.g., from the web app):
+
+```bash
+bm cloud api-key save bmc_abc123...
+```
+
+<Note>
+  API keys must start with the `bmc_` prefix. Keys from other sources will be rejected.
+</Note>
+
+### API Key Storage
+
+API keys are stored in your Basic Memory configuration file at `~/.basic-memory/config.yaml`:
+
+```yaml
+cloud_api_key: bmc_abc123...
+```
+
+### API Key Security
+
+<Warning>
+  API keys grant full access to your cloud projects. Treat them like passwords:
+  
+  - Never commit API keys to version control
+  - Don't share keys in public channels
+  - Rotate keys periodically
+  - Revoke unused keys through the web app
+</Warning>
+
+## Authentication Priority
+
+When both OAuth tokens and API keys are present, Basic Memory uses this priority:
+
+1. **API key** - Used for per-project cloud routing when `project set-cloud` is enabled
+2. **OAuth token** - Used for global cloud operations and when API key is not configured
+
+### Per-Project Routing Example
+
+```bash
+# Save API key
+bm cloud api-key save bmc_abc123...
+
+# Set specific project to route through cloud
+bm project set-cloud research
+
+# This project now uses cloud API with API key auth
+bm project info research --cloud
+
+# Other projects remain local
+bm project info notes  # Uses local API
+```
+
+## Token Management
+
+### Token Storage Locations
+
+- **OAuth tokens**: `~/.basic-memory/.cloud_tokens.json`
+- **API keys**: `~/.basic-memory/config.yaml` (under `cloud_api_key`)
+
+### Token Expiration
+
+OAuth tokens expire after a period of inactivity. When a token expires:
+
+```bash
+# Check if token is expired
+bm cloud status
+```
+
+**Output:**
+```
+Cloud Authentication Status
+  Host: https://api.basicmemory.com
+  API Key: not set
+  OAuth: token expired
+```
+
+Simply login again to refresh:
+
+```bash
+bm cloud login
+```
+
+### Token Refresh
+
+OAuth tokens are automatically refreshed during the login process. You don't need to manually refresh tokens.
+
+## Troubleshooting
+
+### Browser Doesn't Open
+
+If the browser fails to open automatically:
+
+1. Look for the authentication URL in the terminal
+2. Manually open the URL in your browser
+3. Enter the displayed user code
+4. Complete authentication
+
+### Authentication Timeout
+
+The device authorization flow times out after 10 minutes. If you see a timeout error:
+
+```bash
+# Start the login process again
+bm cloud login
+```
+
+### Invalid API Key
+
+If your API key is rejected:
+
+```bash
+# Verify the key format (must start with bmc_)
+bm cloud status
+
+# Create a new key if needed
+bm cloud api-key create "new-key"
+```
+
+### Subscription Issues
+
+If subscription verification fails:
+
+1. Verify your subscription is active at [basicmemory.com/account](https://basicmemory.com/account)
+2. If you just subscribed, wait a few minutes for propagation
+3. Try logging in again: `bm cloud login`
+4. Contact support if issues persist
+
+### Clearing Credentials
+
+To completely reset cloud credentials:
+
+```bash
+# Remove OAuth tokens
+bm cloud logout
+
+# Manually remove API key from config
+# Edit ~/.basic-memory/config.yaml and remove the cloud_api_key line
+```
+
+## Environment Variables
+
+Control authentication behavior with environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BASIC_MEMORY_FORCE_LOCAL` | `false` | Force local API routing (skip cloud) |
+| `BASIC_MEMORY_FORCE_CLOUD` | `false` | Force cloud API routing |
+| `BASIC_MEMORY_EXPLICIT_ROUTING` | `false` | Mark route selection as explicit |
+
+**Example:**
+```bash
+# Force local routing for a single command
+BASIC_MEMORY_FORCE_LOCAL=true bm project list
+
+# Force cloud routing
+BASIC_MEMORY_FORCE_CLOUD=true bm status
+```
+
+## Security Best Practices
+
+### OAuth
+- Complete the authentication flow promptly (10-minute timeout)
+- Close the browser tab after authentication
+- Logout when using shared computers: `bm cloud logout`
+
+### API Keys
+- Use descriptive names to track key usage: `bm cloud api-key create "desktop-work"`
+- Create separate keys for different machines/contexts
+- Revoke unused keys through the web dashboard
+- Never log or print API keys in scripts
+
+### Configuration Files
+- Set restrictive permissions: `chmod 600 ~/.basic-memory/config.yaml`
+- Don't share configuration files containing API keys
+- Add `~/.basic-memory/` to `.gitignore` in projects
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Bidirectional Sync" icon="arrows-rotate" href="/cloud/sync">
+    Set up file synchronization after authentication
+  </Card>
+  
+  <Card title="Project Management" icon="folder" href="/cloud/projects">
+    Configure cloud projects and routing
+  </Card>
+  
+  <Card title="Cloud Setup" icon="cloud" href="/cloud/overview#getting-started">
+    Complete cloud setup guide
+  </Card>
+</CardGroup>

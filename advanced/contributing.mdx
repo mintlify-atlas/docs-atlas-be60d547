@@ -1,0 +1,492 @@
+---
+title: Contributing
+description: Guidelines for contributing to Basic Memory
+---
+
+Thank you for considering contributing to Basic Memory! This guide covers the process for contributing and getting started as a developer.
+
+## Quick Start
+
+<Steps>
+  <Step title="Fork the repository">
+    Fork [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) on GitHub
+  </Step>
+  
+  <Step title="Clone your fork">
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/basic-memory.git
+    cd basic-memory
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    just install
+    source .venv/bin/activate
+    ```
+  </Step>
+  
+  <Step title="Create a branch">
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+  </Step>
+  
+  <Step title="Make changes and test">
+    ```bash
+    # Make your changes
+    just check  # Lint, format, typecheck, test
+    ```
+  </Step>
+  
+  <Step title="Commit with sign-off">
+    ```bash
+    git commit -s -m "Add your feature"
+    git push origin feature/your-feature-name
+    ```
+  </Step>
+  
+  <Step title="Create pull request">
+    Open a PR on GitHub against the `main` branch
+  </Step>
+</Steps>
+
+## Development Environment
+
+### Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Python 3.12+" icon="python">
+    Required for type parameter syntax
+  </Card>
+  <Card title="just" icon="terminal">
+    Modern command runner
+    ```bash
+    brew install just
+    ```
+  </Card>
+  <Card title="Docker (optional)" icon="docker">
+    For PostgreSQL tests
+  </Card>
+  <Card title="uv (recommended)" icon="rocket">
+    Fast Python package manager
+  </Card>
+</CardGroup>
+
+### Setup
+
+```bash
+# Install dependencies
+just install
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Verify setup
+just test-unit-sqlite
+```
+
+## Development Workflow
+
+### 1. Code Changes
+
+Make your changes following these guidelines:
+
+<AccordionGroup>
+  <Accordion title="Code Style">
+    - Line length: 100 characters
+    - Use type annotations for all functions
+    - Follow existing patterns
+    - Add docstrings to public APIs
+  </Accordion>
+  
+  <Accordion title="Testing">
+    - Write tests for new features
+    - Maintain 100% coverage where practical
+    - Add integration tests for workflows
+    - Use markers: `@pytest.mark.benchmark`, `@pytest.mark.slow`
+  </Accordion>
+  
+  <Accordion title="Documentation">
+    - Update relevant docs in `docs/`
+    - Add docstrings to public functions
+    - Update CHANGELOG.md for user-facing changes
+  </Accordion>
+</AccordionGroup>
+
+### 2. Quality Checks
+
+Run quality checks before committing:
+
+```bash
+# Run all checks
+just check
+
+# Or individually
+just lint       # Auto-fix linting issues
+just format     # Format with ruff
+just typecheck  # Type check with pyright
+just test       # Run all tests
+```
+
+### 3. Commit Guidelines
+
+<Info>
+All commits must be signed off with the `-s` flag to certify you agree to the Developer Certificate of Origin.
+</Info>
+
+```bash
+# Commit with sign-off
+git commit -s -m "feat: add new feature"
+```
+
+**Commit message format**:
+
+```
+type: short description
+
+Longer explanation if needed.
+
+Fixes #123
+```
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `style`: Code style changes (formatting)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Build/tooling changes
+
+## Pull Request Process
+
+### Creating a Pull Request
+
+<Steps>
+  <Step title="Update your branch">
+    ```bash
+    git fetch upstream
+    git rebase upstream/main
+    ```
+  </Step>
+  
+  <Step title="Push to your fork">
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+  </Step>
+  
+  <Step title="Open PR on GitHub">
+    - Use a clear, descriptive title
+    - Explain what the PR changes and why
+    - Reference related issues with `Fixes #123`
+    - Add screenshots for UI changes
+  </Step>
+</Steps>
+
+### PR Template
+
+```markdown
+## Description
+
+Brief description of changes
+
+## Motivation
+
+Why is this change needed?
+
+## Testing
+
+How did you test these changes?
+
+## Checklist
+
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] Signed commits (`git commit -s`)
+- [ ] All CI checks pass
+```
+
+### Code Review
+
+<Info>
+A maintainer will review your PR. Address feedback by pushing new commits to your branch.
+</Info>
+
+**What reviewers look for**:
+
+- ✅ Code follows style guidelines
+- ✅ Tests cover new functionality
+- ✅ Documentation is updated
+- ✅ No breaking changes (or clearly documented)
+- ✅ CI checks pass
+
+## Developer Certificate of Origin
+
+By contributing, you agree to the [Developer Certificate of Origin (DCO)](https://github.com/basicmachines-co/basic-memory/blob/main/CLA.md).
+
+**What this means**:
+
+- You certify you have the right to submit your contributions
+- You're not knowingly submitting code with patent/copyright issues
+- Your contributions are provided under the project's license (AGPL-3.0)
+
+**How to sign off**:
+
+```bash
+# Use -s flag when committing
+git commit -s -m "Your commit message"
+```
+
+This adds a `Signed-off-by` line to your commit:
+
+```
+feat: add new feature
+
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+## Testing Guidelines
+
+### Running Tests
+
+<Tabs>
+  <Tab title="All Tests">
+    ```bash
+    # SQLite + PostgreSQL
+    just test
+    
+    # SQLite only (faster)
+    just test-sqlite
+    
+    # PostgreSQL only
+    just test-postgres
+    ```
+  </Tab>
+  <Tab title="Unit Tests">
+    ```bash
+    # Fast, isolated tests
+    just test-unit-sqlite
+    just test-unit-postgres
+    ```
+  </Tab>
+  <Tab title="Integration Tests">
+    ```bash
+    # Real workflows, no mocks
+    just test-int-sqlite
+    just test-int-postgres
+    ```
+  </Tab>
+  <Tab title="Selective">
+    ```bash
+    # Changed files only
+    just testmon
+    
+    # Smoke test
+    just test-smoke
+    
+    # Benchmarks
+    just test-benchmark
+    
+    # Specific test
+    pytest tests/test_file.py::test_function
+    ```
+  </Tab>
+</Tabs>
+
+### Writing Tests
+
+<Steps>
+  <Step title="Choose test type">
+    - **Unit test** (`tests/`) - Test individual functions with mocks
+    - **Integration test** (`test-int/`) - Test complete workflows
+  </Step>
+  
+  <Step title="Write the test">
+    ```python
+    import pytest
+    
+    @pytest.mark.asyncio
+    async def test_create_entity(async_session):
+        # Arrange
+        repo = EntityRepository(async_session)
+        
+        # Act
+        entity = await repo.create(title="Test")
+        
+        # Assert
+        assert entity.title == "Test"
+        assert entity.external_uuid is not None
+    ```
+  </Step>
+  
+  <Step title="Add markers if needed">
+    ```python
+    @pytest.mark.benchmark  # Slow performance test
+    @pytest.mark.slow       # > 5 seconds
+    @pytest.mark.postgres   # PostgreSQL only
+    ```
+  </Step>
+  
+  <Step title="Run your test">
+    ```bash
+    pytest tests/test_file.py::test_create_entity -v
+    ```
+  </Step>
+</Steps>
+
+### Coverage Requirements
+
+<Warning>
+We aim for high test coverage. Use `# pragma: no cover` sparingly and only for:
+
+- TYPE_CHECKING blocks
+- Error handlers requiring failure injection
+- Runtime-mode-dependent paths that can't be tested in one run
+</Warning>
+
+```bash
+# Generate coverage report
+just coverage
+open htmlcov/index.html
+```
+
+## LLM-Assisted Development
+
+Basic Memory is designed for collaborative development between humans and LLMs.
+
+### Using Claude/GPT for Contributions
+
+<AccordionGroup>
+  <Accordion title="CLAUDE.md Reference">
+    The `CLAUDE.md` file contains:
+    - Project architecture overview
+    - Development commands
+    - Code style guidelines
+    - Common patterns
+    
+    Use this to provide context to AI assistants.
+  </Accordion>
+  
+  <Accordion title="AI-Human Workflow">
+    1. **AI generates code** based on specifications
+    2. **Human reviews** and runs tests
+    3. **AI adjusts** based on test results
+    4. **Human commits** with sign-off
+    
+    This enables faster development while maintaining quality.
+  </Accordion>
+  
+  <Accordion title="Knowledge Persistence">
+    Save important context in markdown files:
+    - Decision records
+    - Architecture notes
+    - Common patterns
+    
+    This enables knowledge transfer between sessions.
+  </Accordion>
+</AccordionGroup>
+
+## Creating Issues
+
+Before starting work, create an issue to discuss the approach.
+
+**Good issue template**:
+
+```markdown
+## Description
+
+Clear description of the bug or feature request
+
+## Steps to Reproduce (for bugs)
+
+1. Step 1
+2. Step 2
+3. See error
+
+## Expected Behavior
+
+What should happen
+
+## Actual Behavior
+
+What actually happens
+
+## Proposed Solution (optional)
+
+Your suggested approach
+
+## Environment
+
+- Basic Memory version: 0.15.0
+- Python version: 3.12.1
+- OS: macOS 14.2
+```
+
+## Areas for Contribution
+
+<CardGroup cols={2}>
+  <Card title="Bug Fixes" icon="bug">
+    Check GitHub issues labeled `bug`
+  </Card>
+  <Card title="Features" icon="star">
+    Check issues labeled `enhancement`
+  </Card>
+  <Card title="Documentation" icon="book">
+    Improve guides, examples, docstrings
+  </Card>
+  <Card title="Testing" icon="flask">
+    Increase test coverage, add benchmarks
+  </Card>
+  <Card title="Performance" icon="gauge-high">
+    Optimize sync, search, indexing
+  </Card>
+  <Card title="Integrations" icon="plug">
+    New import sources, MCP tools
+  </Card>
+</CardGroup>
+
+## Good First Issues
+
+Look for issues labeled `good first issue`:
+
+- Documentation improvements
+- Small bug fixes
+- Additional test coverage
+- Error message improvements
+
+## Code of Conduct
+
+<Warning>
+All contributors must follow the [Code of Conduct](https://github.com/basicmachines-co/basic-memory/blob/main/CODE_OF_CONDUCT.md).
+</Warning>
+
+**Summary**:
+
+- Be respectful and inclusive
+- Welcome newcomers
+- Focus on technical merit
+- Assume good faith
+- Disagree constructively
+
+## Getting Help
+
+<CardGroup cols={2}>
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/tyvKNccgqN">
+    Ask questions and discuss development
+  </Card>
+  <Card title="GitHub Discussions" icon="github" href="https://github.com/basicmachines-co/basic-memory/discussions">
+    Feature requests and longer discussions
+  </Card>
+  <Card title="GitHub Issues" icon="circle-exclamation" href="https://github.com/basicmachines-co/basic-memory/issues">
+    Report bugs and request features
+  </Card>
+  <Card title="Development Guide" icon="code" href="/advanced/development">
+    Detailed development setup
+  </Card>
+</CardGroup>
+
+## Thank You!
+
+Your contributions make Basic Memory better. We appreciate your time and effort! 🎉

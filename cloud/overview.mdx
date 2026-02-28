@@ -1,0 +1,228 @@
+---
+title: Cloud Features Overview
+description: Overview of Basic Memory Cloud features and benefits
+---
+
+## Introduction
+
+Basic Memory Cloud extends the local-first experience with cross-device synchronization, cloud storage, and multi-platform support. Cloud features are **optional** and require an active subscription.
+
+<Note>
+  The local-first open-source workflow continues as always. Cloud is an optional enhancement for users who need multi-device access.
+</Note>
+
+## Key Benefits
+
+### Cross-Device Access
+- Sync your knowledge graph across desktop, web, and mobile
+- Work seamlessly from any device
+- Real-time synchronization keeps everything in sync
+
+### Bidirectional Sync
+- Two-way sync between local files and cloud storage
+- Conflict resolution with integrity verification
+- Mount cloud storage for direct file access
+
+### Project Management
+- Create and manage projects in the cloud
+- Toggle individual projects between local and cloud modes
+- Per-project sync configuration
+
+### Secure Storage
+- JWT-based authentication with subscription validation
+- Encrypted cloud storage with Tigris Object Storage
+- Automatic snapshot management for data protection
+
+## Cloud Architecture
+
+Basic Memory Cloud uses:
+
+- **Authentication**: OAuth 2.0 via WorkOS AuthKit with JWT tokens
+- **Storage**: Tigris Object Storage (S3-compatible)
+- **Sync**: rclone bisync for bidirectional synchronization
+- **API**: RESTful API with subscription-based access control
+
+## Getting Started
+
+<Steps>
+  <Step title="Sign Up">
+    Create an account at [basicmemory.com](https://basicmemory.com) with a 7-day free trial.
+    
+    Use promo code `BMFOSS` for 20% off for 3 months (OSS contributors).
+  </Step>
+  
+  <Step title="Authenticate">
+    ```bash
+    basic-memory cloud login
+    ```
+    
+    This opens your browser for OAuth authentication and stores tokens locally.
+  </Step>
+  
+  <Step title="Setup Sync">
+    ```bash
+    basic-memory cloud setup
+    ```
+    
+    Installs rclone and configures cloud credentials for file synchronization.
+  </Step>
+  
+  <Step title="Configure Projects">
+    Add a project with cloud sync:
+    
+    ```bash
+    basic-memory project add research --cloud --local-path ~/Documents/research
+    ```
+    
+    Or configure sync for an existing project:
+    
+    ```bash
+    basic-memory cloud sync-setup research ~/Documents/research
+    ```
+  </Step>
+  
+  <Step title="Sync">
+    Run your first bidirectional sync:
+    
+    ```bash
+    # Preview changes (recommended)
+    basic-memory cloud bisync --name research --resync --dry-run
+    
+    # Perform the sync
+    basic-memory cloud bisync --name research --resync
+    ```
+  </Step>
+</Steps>
+
+## Subscription Requirements
+
+<Warning>
+  All cloud features require an active subscription. The CLI will prompt you to subscribe when attempting to use cloud features without a valid subscription.
+</Warning>
+
+### What Requires a Subscription
+
+- Cloud authentication and API access
+- Bidirectional file synchronization
+- Cloud project management
+- Snapshot creation and restoration
+- Cloud workspace access
+
+### What Remains Free
+
+- Local-only Basic Memory usage
+- All MCP tools with local projects
+- Local file synchronization
+- Local database operations
+- Importing from Claude/ChatGPT
+
+## Cloud vs Local Mode
+
+You can mix local and cloud projects in the same configuration:
+
+| Feature | Local Mode | Cloud Mode |
+|---------|-----------|------------|
+| File Storage | Local filesystem | Local + Cloud (synced) |
+| MCP Access | Local API (stdio) | Local API (stdio) |
+| CLI Routing | Local API | Cloud API (when set) |
+| Authentication | None required | API key or OAuth |
+| Subscription | Not required | Required |
+| Sync | Optional watch mode | Bidirectional bisync |
+
+### Per-Project Routing
+
+Individual projects can be routed through the cloud while others stay local:
+
+```bash
+# Save API key (create via web app or CLI)
+bm cloud api-key save bmc_abc123...
+
+# Set specific project to cloud mode
+bm project set-cloud research
+
+# Revert to local mode
+bm project set-local research
+
+# List projects with routing info
+bm project list
+```
+
+## Command Overview
+
+### Authentication Commands
+```bash
+bm cloud login          # Authenticate with OAuth
+bm cloud logout         # Remove OAuth tokens
+bm cloud status         # Check auth and health
+```
+
+### Sync Commands
+```bash
+bm cloud sync --name <project>           # One-way: local → cloud
+bm cloud bisync --name <project>         # Two-way: local ↔ cloud
+bm cloud check --name <project>          # Verify integrity
+bm cloud sync-setup <name> <local-path>  # Configure sync
+```
+
+### Project Management
+```bash
+bm project list                    # List all projects
+bm project add <name> --cloud      # Add cloud project
+bm project set-cloud <name>        # Enable cloud routing
+bm project set-local <name>        # Disable cloud routing
+```
+
+### Snapshot Management
+```bash
+bm cloud snapshot create "description"  # Create snapshot
+bm cloud snapshot list                  # List snapshots
+bm cloud snapshot show <id>             # Show snapshot details
+bm cloud restore <path> --snapshot <id> # Restore files
+```
+
+### Workspace Management
+```bash
+bm cloud workspace list               # List workspaces
+bm cloud workspace set-default <name> # Set default workspace
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication Setup" icon="key" href="/cloud/authentication">
+    Learn how to authenticate with Basic Memory Cloud
+  </Card>
+  
+  <Card title="Bidirectional Sync" icon="arrows-rotate" href="/cloud/sync">
+    Set up two-way synchronization between local and cloud
+  </Card>
+  
+  <Card title="Project Management" icon="folder" href="/cloud/projects">
+    Manage cloud projects and routing configuration
+  </Card>
+  
+  <Card title="CLI Reference" icon="terminal" href="/api/cli/overview">
+    Complete CLI command reference
+  </Card>
+</CardGroup>
+
+## Telemetry
+
+Basic Memory collects minimal, anonymous usage events for cloud conversion funnel analysis:
+
+**What we collect:**
+- Cloud promo impressions and login attempts
+- Promo opt-out events
+
+**What we do NOT collect:**
+- File contents, note titles, or knowledge base data
+- Personally identifiable information (PII)
+- IP addresses or fingerprinting data
+- Per-command or per-tool-call tracking
+
+**Opt out** by setting:
+```bash
+export BASIC_MEMORY_NO_PROMOS=1
+```
+
+This disables both promo messages and all telemetry events.

@@ -1,0 +1,80 @@
+---
+title: "MCP Tools Overview"
+description: "Model Context Protocol tools for Basic Memory knowledge management"
+---
+
+Basic Memory exposes a comprehensive set of Model Context Protocol (MCP) tools that enable AI assistants to interact with your knowledge base. These tools are organized into the following categories:
+
+## Content Management
+
+Tools for creating, reading, updating, and deleting markdown notes:
+
+- **[write_note](/api/mcp/content-management#write_note)** - Create markdown notes with semantic observations and relations
+- **[read_note](/api/mcp/content-management#read_note)** - Read notes by title, permalink, or memory:// URL
+- **[edit_note](/api/mcp/content-management#edit_note)** - Edit notes incrementally with various operations
+- **[delete_note](/api/mcp/content-management#delete_note)** - Delete notes or directories
+- **[move_note](/api/mcp/content-management#move_note)** - Move notes to new locations
+- **[read_content](/api/mcp/content-management#read_content)** - Read raw file content (text, images, binaries)
+- **[view_note](/api/mcp/content-management#view_note)** - View notes as formatted artifacts
+
+## Knowledge Graph Navigation
+
+Tools for navigating and exploring the knowledge graph:
+
+- **[build_context](/api/mcp/knowledge-graph#build_context)** - Navigate the knowledge graph via memory:// URLs
+- **[recent_activity](/api/mcp/knowledge-graph#recent_activity)** - Get recently updated information
+- **[list_directory](/api/mcp/knowledge-graph#list_directory)** - Browse directory contents
+
+## Search & Discovery
+
+Powerful search capabilities across your knowledge base:
+
+- **[search_notes](/api/mcp/search#search_notes)** - Full-text search with advanced filtering
+- **[search](/api/mcp/search#search)** - OpenAI-compatible search interface
+
+## Project Management
+
+Tools for managing Basic Memory projects:
+
+- **[list_memory_projects](/api/mcp/projects#list_memory_projects)** - List all available projects
+- **[create_memory_project](/api/mcp/projects#create_memory_project)** - Create new projects
+- **[delete_project](/api/mcp/projects#delete_project)** - Delete projects
+
+## Visualization
+
+Tools for creating visual representations:
+
+- **[canvas](/api/mcp/visualization#canvas)** - Generate Obsidian canvas files for knowledge graph visualization
+
+## Project Resolution
+
+All MCP tools use a unified project resolution hierarchy:
+
+1. **Single Project Mode** - Server constrained to one project (via `BASIC_MEMORY_MCP_PROJECT` environment variable)
+2. **Explicit project parameter** - Specify which project to use in the tool call
+3. **Default project** - Server configured default if no project specified
+
+When the project is unknown, use `list_memory_projects()` or `recent_activity()` to discover available projects.
+
+## Cloud Mode
+
+Basic Memory supports both local and cloud operation modes:
+
+- **Local Mode** - Direct access to local markdown files
+- **Cloud Mode** - Synced access via Basic Memory Cloud
+- **Hybrid Mode** - Different projects can be local or cloud independently
+
+Projects are automatically routed to the appropriate backend based on their configuration.
+
+## Authentication
+
+Cloud projects use JWT-based authentication with subscription validation. Authentication is handled automatically by the MCP server based on the project configuration.
+
+## Output Formats
+
+Most tools support both `text` and `json` output formats:
+
+- **text** - Human-readable markdown formatted output (default)
+- **json** - Machine-readable structured data for programmatic use
+
+Specify the output format using the `output_format` parameter.

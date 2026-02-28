@@ -1,0 +1,275 @@
+---
+title: 'Using with Claude Desktop'
+description: 'Set up and use Basic Memory with Claude Desktop for persistent AI conversations'
+icon: 'desktop'
+---
+
+## Overview
+
+Basic Memory integrates with Claude Desktop through the Model Context Protocol (MCP), giving Claude the ability to read and write to your local knowledge base. This enables conversations that build on previous knowledge and maintain context across sessions.
+
+## Installation
+
+<Steps>
+  <Step title="Install Basic Memory">
+    Install Basic Memory using uv (recommended):
+    
+    ```bash
+    uv tool install basic-memory
+    ```
+    
+    Alternatively, use pip:
+    
+    ```bash
+    pip install basic-memory
+    ```
+  </Step>
+
+  <Step title="Configure Claude Desktop">
+    Edit your Claude Desktop configuration file:
+    
+    <Tabs>
+      <Tab title="macOS">
+        Open the configuration file:
+        
+        ```bash
+        ~/Library/Application Support/Claude/claude_desktop_config.json
+        ```
+      </Tab>
+      
+      <Tab title="Windows">
+        Open the configuration file:
+        
+        ```bash
+        %APPDATA%\Claude\claude_desktop_config.json
+        ```
+      </Tab>
+      
+      <Tab title="Linux">
+        Open the configuration file:
+        
+        ```bash
+        ~/.config/Claude/claude_desktop_config.json
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Add Basic Memory Configuration">
+    Add this configuration to your `claude_desktop_config.json`:
+    
+    ```json
+    {
+      "mcpServers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp"
+          ]
+        }
+      }
+    }
+    ```
+    
+    <Note>
+      If you installed with pip instead of uv, use `"command": "basic-memory"` and `"args": ["mcp"]`
+    </Note>
+  </Step>
+
+  <Step title="Restart Claude Desktop">
+    Close and reopen Claude Desktop for the changes to take effect. You should see a small hammer icon indicating MCP tools are available.
+  </Step>
+
+  <Step title="Start Sync Process (Optional but Recommended)">
+    Run the sync process to keep your files and database in sync:
+    
+    ```bash
+    # One-time sync
+    basic-memory sync
+    
+    # Real-time sync (recommended)
+    basic-memory sync --watch
+    ```
+    
+    <Tip>
+      Run `basic-memory sync --watch` in a separate terminal to keep your knowledge base synchronized in real-time as Claude creates and updates notes.
+    </Tip>
+  </Step>
+</Steps>
+
+## Using Multiple Projects
+
+You can configure Claude Desktop to work with a specific project by adding the `--project` flag:
+
+```json
+{
+  "mcpServers": {
+    "basic-memory": {
+      "command": "uvx",
+      "args": [
+        "basic-memory",
+        "mcp",
+        "--project",
+        "your-project-name"
+      ]
+    }
+  }
+}
+```
+
+### Multiple Project Configurations
+
+You can set up multiple MCP server entries for different projects:
+
+```json
+{
+  "mcpServers": {
+    "basic-memory-work": {
+      "command": "uvx",
+      "args": [
+        "basic-memory",
+        "mcp",
+        "--project",
+        "work"
+      ]
+    },
+    "basic-memory-research": {
+      "command": "uvx",
+      "args": [
+        "basic-memory",
+        "mcp",
+        "--project",
+        "research"
+      ]
+    }
+  }
+}
+```
+
+## Example Conversations
+
+Once configured, you can have natural conversations with Claude that build your knowledge base:
+
+### Creating Notes
+
+```
+You: I've been learning about pour over coffee. Water temperature
+around 205°F seems to work best, and freshly ground beans make a
+huge difference in flavor clarity.
+
+Claude: That's great information about coffee brewing! Would you like
+me to create a note to capture this knowledge?
+
+You: Yes, please create a note about coffee brewing methods.
+
+Claude: [Creates note using write_note tool]
+```
+
+### Reading and Building on Knowledge
+
+```
+You: What do I know about pour over coffee?
+
+Claude: [Uses read_note and build_context tools to retrieve information]
+Based on your notes about coffee brewing methods, you've documented
+that pour over provides more flavor clarity than French press...
+```
+
+### Searching Your Knowledge
+
+```
+You: Find my notes about Ethiopian beans
+
+Claude: [Uses search_notes tool]
+I found several notes mentioning Ethiopian beans...
+```
+
+## Available Tools
+
+Claude has access to these Basic Memory tools:
+
+<AccordionGroup>
+  <Accordion title="Content Management">
+    - **write_note** - Create or update notes with observations and relations
+    - **read_note** - Read notes by title, permalink, or memory:// URL
+    - **read_content** - Read raw file content (text, images, binaries)
+    - **view_note** - View notes as formatted artifacts
+    - **edit_note** - Edit notes incrementally (append, find/replace, etc.)
+    - **move_note** - Move notes to different locations
+    - **delete_note** - Delete notes from the knowledge base
+  </Accordion>
+  
+  <Accordion title="Knowledge Graph Navigation">
+    - **build_context** - Navigate the knowledge graph via memory:// URLs
+    - **recent_activity** - See recently updated content
+    - **list_directory** - Browse directory contents
+  </Accordion>
+  
+  <Accordion title="Search & Discovery">
+    - **search_notes** - Full-text search across all content
+  </Accordion>
+  
+  <Accordion title="Project Management">
+    - **list_memory_projects** - List all available projects
+    - **create_memory_project** - Create new projects
+    - **delete_project** - Delete projects
+  </Accordion>
+  
+  <Accordion title="Visualization">
+    - **canvas** - Create Obsidian canvas visualizations
+  </Accordion>
+</AccordionGroup>
+
+## Viewing Your Notes
+
+All notes are stored as Markdown files in your project directory (default: `~/basic-memory`). You can:
+
+- View and edit them with any text editor
+- Open them in Obsidian for a rich knowledge graph experience
+- Use git for version control
+- Sync them across devices
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tools not appearing in Claude">
+    1. Verify your `claude_desktop_config.json` is properly formatted
+    2. Check that the file path is correct for your operating system
+    3. Restart Claude Desktop completely
+    4. Check Claude's developer console for error messages (Help > Developer > Toggle Developer Tools)
+  </Accordion>
+  
+  <Accordion title="Sync issues">
+    1. Run `basic-memory status` to check database status
+    2. Run `basic-memory sync` to manually sync files
+    3. Check file permissions in your project directory
+    4. Use `basic-memory doctor` to diagnose consistency issues
+  </Accordion>
+  
+  <Accordion title="Performance with large knowledge bases">
+    1. Ensure you're running `basic-memory sync --watch` for real-time updates
+    2. Consider splitting content into multiple projects
+    3. Use the search tools with filters to narrow results
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Notes" icon="pen" href="/guides/writing-notes">
+    Learn how to write effective notes with observations and relations
+  </Card>
+  
+  <Card title="Searching Content" icon="magnifying-glass" href="/guides/searching">
+    Master search techniques to find information quickly
+  </Card>
+  
+  <Card title="Managing Projects" icon="folder" href="/guides/projects">
+    Organize your knowledge with multiple projects
+  </Card>
+  
+  <Card title="Creating Visualizations" icon="diagram-project" href="/guides/visualization">
+    Build visual knowledge maps with canvas
+  </Card>
+</CardGroup>

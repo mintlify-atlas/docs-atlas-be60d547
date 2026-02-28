@@ -1,0 +1,268 @@
+---
+title: "Project Management Tools"
+description: "MCP tools for managing Basic Memory projects"
+---
+
+## list_memory_projects
+
+List all available projects with their status.
+
+```python
+async def list_memory_projects(
+    output_format: Literal["text", "json"] = "text",
+    workspace: str | None = None,
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="output_format" type="string" default="text">
+  Response format:
+  - `text` - Human-readable project list with guidance
+  - `json` - Structured project metadata
+</ParamField>
+
+<ParamField path="workspace" type="string">
+  Cloud workspace name or tenant_id. Falls back to `config.default_workspace` when not specified.
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string | dict">
+  **Text format:**
+  - List of available projects with source (local, cloud, local+cloud)
+  - Guidance for selecting a project
+  - Session reminder to track selected project
+  
+  **JSON format:**
+  ```json
+  {
+    "projects": [
+      {
+        "name": "project-name",
+        "path": "/path/to/project",
+        "local_path": "/local/path",
+        "cloud_path": "/cloud/path",
+        "source": "local+cloud",
+        "is_default": true,
+        "is_private": false,
+        "display_name": "Project Display Name",
+        "workspace_name": "workspace",
+        "workspace_type": "personal",
+        "workspace_tenant_id": "tenant-id"
+      }
+    ],
+    "default_project": "project-name",
+    "constrained_project": null
+  }
+  ```
+  
+  **Constrained Mode:**
+  When `BASIC_MEMORY_MCP_PROJECT` is set, shows single project constraint info.
+</ResponseField>
+
+### Project Sources
+
+Projects can have different sources:
+
+- **local** - Only exists in local configuration
+- **cloud** - Only exists in cloud workspace
+- **local+cloud** - Exists in both local and cloud
+
+### Examples
+
+```python
+# List all projects (text)
+list_memory_projects()
+
+# Get structured project data
+list_memory_projects(output_format="json")
+
+# List projects in specific workspace
+list_memory_projects(workspace="workspace-tenant-id")
+```
+
+---
+
+## create_memory_project
+
+Create a new Basic Memory project.
+
+```python
+async def create_memory_project(
+    project_name: str,
+    project_path: str,
+    set_default: bool = False,
+    output_format: Literal["text", "json"] = "text",
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="project_name" type="string" required>
+  Name for the new project (must be unique)
+</ParamField>
+
+<ParamField path="project_path" type="string" required>
+  File system path where the project will be stored.
+  The project directory will be created if it doesn't exist.
+</ParamField>
+
+<ParamField path="set_default" type="boolean" default="false">
+  Whether to set this project as the default project
+</ParamField>
+
+<ParamField path="output_format" type="string" default="text">
+  Response format:
+  - `text` - Human-readable confirmation
+  - `json` - Structured project creation metadata
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string | dict">
+  **Text format:**
+  - Confirmation message
+  - Project details (name, path, default status)
+  - Usage guidance
+  
+  **JSON format:**
+  ```json
+  {
+    "name": "project-name",
+    "path": "/path/to/project",
+    "is_default": false,
+    "created": true,
+    "already_exists": false
+  }
+  ```
+  
+  **Error cases:**
+  - If project already exists: `already_exists: true, created: false`
+  - If constrained mode: `error: "PROJECT_CONSTRAINED"`
+</ResponseField>
+
+### Examples
+
+```python
+# Create basic project
+create_memory_project(
+    "my-research",
+    "~/Documents/research"
+)
+
+# Create and set as default
+create_memory_project(
+    "work-notes",
+    "/home/user/work",
+    set_default=True
+)
+
+# Get structured response
+create_memory_project(
+    "team-docs",
+    "~/team-docs",
+    output_format="json"
+)
+```
+
+### Constraints
+
+- Cannot create projects when `BASIC_MEMORY_MCP_PROJECT` is set (constrained mode)
+- Project names must be unique
+- Project path will be created if it doesn't exist
+
+---
+
+## delete_project
+
+Delete a Basic Memory project.
+
+```python
+async def delete_project(
+    project_name: str,
+    context: Context | None = None,
+) -> str
+```
+
+### Parameters
+
+<ParamField path="project_name" type="string" required>
+  Name of the project to delete
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string">
+  Confirmation message about project deletion including:
+  - Removed project details (name, path)
+  - Note that files remain on disk
+  - Instructions for re-adding if needed
+</ResponseField>
+
+### Examples
+
+```python
+# Delete a project
+delete_project("old-project")
+```
+
+### Important Notes
+
+- This does NOT delete files on disk - only removes the project from Basic Memory's configuration and database
+- The project will need to be re-added to access its content through Basic Memory again
+- Cannot delete projects when `BASIC_MEMORY_MCP_PROJECT` is set (constrained mode)
+- This action cannot be undone
+
+### Constraints
+
+- Cannot delete projects in constrained mode
+- Project must exist (raises error if not found)
+- Shows list of available projects if project name doesn't match
+
+---
+
+## get_current_project
+
+Get information about the currently active project.
+
+```python
+async def get_current_project(
+    project: Optional[str] = None,
+    context: Context | None = None,
+) -> dict
+```
+
+### Parameters
+
+<ParamField path="project" type="string">
+  Optional project name to query. If not provided, uses default project resolution.
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="dict">
+  Project information including:
+  ```json
+  {
+    "name": "project-name",
+    "path": "/path/to/project",
+    "external_id": "uuid",
+    "is_default": true,
+    "mode": "local",
+    "home": "/resolved/path"
+  }
+  ```
+</ResponseField>
+
+### Examples
+
+```python
+# Get current/default project
+get_current_project()
+
+# Get specific project info
+get_current_project(project="work-docs")
+```

@@ -1,0 +1,275 @@
+---
+title: "Search Tools"
+description: "MCP tools for searching and discovering content"
+---
+
+## search_notes
+
+Search across all content in the knowledge base with comprehensive syntax support.
+
+```python
+async def search_notes(
+    query: Optional[str] = None,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+    search_type: str | None = None,
+    output_format: Literal["text", "json"] = "text",
+    note_types: List[str] | None = None,
+    entity_types: List[str] | None = None,
+    after_date: Optional[str] = None,
+    metadata_filters: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[str]] = None,
+    status: Optional[str] = None,
+    min_similarity: Optional[float] = None,
+    context: Context | None = None,
+) -> SearchResponse | dict | str
+```
+
+### Parameters
+
+<ParamField path="query" type="string">
+  Search query string. Supports boolean operators, phrases, and patterns.
+  Can be omitted for filter-only searches using `metadata_filters`, `tags`, or `status`.
+</ParamField>
+
+<ParamField path="project" type="string">
+  Project name to search in. Optional - server resolves using hierarchy.
+</ParamField>
+
+<ParamField path="page" type="integer" default="1">
+  Page number of results to return
+</ParamField>
+
+<ParamField path="page_size" type="integer" default="10">
+  Number of results to return per page
+</ParamField>
+
+<ParamField path="search_type" type="string">
+  Type of search to perform:
+  - `text` - Full-text search (FTS)
+  - `title` - Search only in titles
+  - `permalink` - Search/match permalinks
+  - `vector` - Semantic vector search
+  - `semantic` - Alias for vector
+  - `hybrid` - Combine FTS and vector search
+  
+  Default is dynamic: "hybrid" when semantic search is enabled, otherwise "text".
+</ParamField>
+
+<ParamField path="output_format" type="string" default="text">
+  "text" returns structured SearchResponse. "json" returns machine-readable dict.
+</ParamField>
+
+<ParamField path="note_types" type="list[string]">
+  Filter by note types. Examples: `["note", "person", "guide"]`
+</ParamField>
+
+<ParamField path="entity_types" type="list[string]">
+  Filter by entity types. Examples: `["entity", "observation", "relation"]`
+</ParamField>
+
+<ParamField path="after_date" type="string">
+  Filter for recent content. Examples:
+  - `"1 week"` - Content from last week
+  - `"2d"` - Last 2 days
+  - `"2024-01-01"` - Since specific date
+</ParamField>
+
+<ParamField path="metadata_filters" type="dict">
+  Structured frontmatter filters. Supported forms:
+  - Equality: `{"status": "in-progress"}`
+  - Array contains: `{"tags": ["security", "oauth"]}`
+  - Operators:
+    - `$in`: `{"priority": {"$in": ["high", "critical"]}}`
+    - `$gt`, `$gte`, `$lt`, `$lte`: `{"schema.confidence": {"$gt": 0.7}}`
+    - `$between`: `{"schema.confidence": {"$between": [0.3, 0.6]}}`
+  
+  Use dot notation for nested keys: `"schema.confidence"`
+</ParamField>
+
+<ParamField path="tags" type="list[string]">
+  Filter by frontmatter tags. Shorthand for `metadata_filters["tags"]`.
+</ParamField>
+
+<ParamField path="status" type="string">
+  Filter by frontmatter status. Shorthand for `metadata_filters["status"]`.
+</ParamField>
+
+<ParamField path="min_similarity" type="float">
+  Override global semantic similarity threshold for this query.
+  Only applies to vector and hybrid search types.
+  - `0.0` - See all vector results
+  - `0.8` - High precision
+</ParamField>
+
+### Returns
+
+<ResponseField name="results" type="SearchResponse | dict | string">
+  **SearchResponse** (output_format="text"):
+  - `results` - Array of search results with metadata
+  - `total_results` - Total number of matches
+  - `page`, `page_size` - Pagination info
+  - `has_more` - Whether more results exist
+  
+  **JSON format** (output_format="json"):
+  - Machine-readable dictionary with same fields
+  
+  **Error cases**:
+  - Helpful error messages with troubleshooting guidance
+</ResponseField>
+
+### Search Syntax Examples
+
+#### Basic Searches
+
+```python
+# Simple keyword
+search_notes("keyword")
+
+# Exact phrase
+search_notes("'exact phrase'")
+```
+
+#### Boolean Searches
+
+```python
+# Multiple terms (strict AND, fallback to OR)
+search_notes("term1 term2")
+
+# Explicit AND
+search_notes("term1 AND term2")
+
+# OR search
+search_notes("term1 OR term2")
+
+# NOT search
+search_notes("term1 NOT term2")
+
+# Grouped logic
+search_notes("(project OR planning) AND notes")
+```
+
+#### Content-Specific Searches
+
+```python
+# Tag search (requires search_type="text")
+search_notes("tag:example", search_type="text")
+
+# Category search
+search_notes("category:observation")
+
+# Author search (if metadata available)
+search_notes("author:username")
+```
+
+#### Search Type Examples
+
+```python
+# Title-only search
+search_notes("Meeting", search_type="title")
+
+# Permalink pattern match
+search_notes("docs/meeting-*", search_type="permalink")
+
+# Hybrid search (semantic + text)
+search_notes("keyword")  # Default when semantic enabled
+```
+
+#### Filtering Examples
+
+```python
+# Filter by note type
+search_notes("query", note_types=["note"])
+
+# Multiple note types
+search_notes("query", note_types=["note", "person"])
+
+# Filter by entity type
+search_notes("query", entity_types=["observation"])
+
+# Recent content only
+search_notes("query", after_date="2024-01-01")
+search_notes("query", after_date="1 week")
+
+# Filter by tags
+search_notes("query", tags=["security"])
+
+# Filter by status
+search_notes("query", status="in-progress")
+
+# Complex metadata filter
+search_notes(
+    "query",
+    metadata_filters={
+        "priority": {"$in": ["high", "critical"]},
+        "schema.confidence": {"$gt": 0.7}
+    }
+)
+```
+
+#### Filter-Only Searches
+
+```python
+# Omit query for filter-only search
+search_notes(metadata_filters={"type": "spec"})
+search_notes(tags=["security"])
+search_notes(status="draft")
+```
+
+#### Advanced Patterns
+
+```python
+# Complex boolean logic
+search_notes("project AND (meeting OR discussion)")
+
+# Phrase + keyword
+search_notes('"exact phrase" AND keyword')
+
+# Exclude resolved issues
+search_notes("bug NOT fixed")
+
+# Year-based permalink search
+search_notes("docs/2024-*", search_type="permalink")
+```
+
+---
+
+## search
+
+OpenAI-compatible search interface.
+
+```python
+async def search(
+    query: str,
+    project: Optional[str] = None,
+    context: Context | None = None,
+) -> str
+```
+
+### Parameters
+
+<ParamField path="query" type="string" required>
+  Search query string
+</ParamField>
+
+<ParamField path="project" type="string">
+  Project name to search in. Optional - server resolves using hierarchy.
+</ParamField>
+
+### Returns
+
+<ResponseField name="results" type="string">
+  Formatted search results compatible with OpenAI actions.
+</ResponseField>
+
+### Examples
+
+```python
+# Basic search
+search("project planning")
+
+# Search with project
+search("meeting notes", project="work-docs")
+```

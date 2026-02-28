@@ -1,0 +1,626 @@
+---
+title: 'Managing Multiple Projects'
+description: 'Organize your knowledge across multiple projects'
+icon: 'folder-tree'
+---
+
+## Overview
+
+Basic Memory supports multiple projects, allowing you to organize knowledge into separate, independent knowledge bases. Each project has:
+
+- Its own directory of Markdown files
+- Separate SQLite database for indexing
+- Independent configuration and settings
+- Isolated knowledge graph
+
+## Why Use Multiple Projects?
+
+<CardGroup cols={2}>
+  <Card title="Work vs Personal" icon="briefcase">
+    Keep professional and personal knowledge separate
+  </Card>
+  
+  <Card title="Team Collaboration" icon="users">
+    Share project-specific knowledge with teammates
+  </Card>
+  
+  <Card title="Client Work" icon="handshake">
+    Maintain separate knowledge bases for different clients
+  </Card>
+  
+  <Card title="Research Topics" icon="flask">
+    Organize different research areas independently
+  </Card>
+</CardGroup>
+
+## Project Management
+
+### List Projects
+
+View all available projects:
+
+```bash
+basic-memory project list
+```
+
+Output:
+```
+Available projects:
+  * work        ~/work-notes       (default)
+    research    ~/research-notes
+    personal    ~/personal-notes
+```
+
+### Create Project
+
+Create a new project:
+
+```bash
+basic-memory project add "project-name" ~/path/to/directory
+```
+
+Examples:
+
+<CodeGroup>
+```bash Work Project
+basic-memory project add "work" ~/Documents/work-notes
+```
+
+```bash Research Project
+basic-memory project add "research" ~/Documents/research
+```
+
+```bash Client Project
+basic-memory project add "client-acme" ~/clients/acme/knowledge
+```
+</CodeGroup>
+
+### Set Default Project
+
+Set which project is used by default:
+
+```bash
+basic-memory project default "project-name"
+```
+
+Example:
+```bash
+basic-memory project default "work"
+```
+
+### Remove Project
+
+Remove a project from configuration (files remain on disk):
+
+```bash
+basic-memory project remove "project-name"
+```
+
+<Warning>
+  This removes the project from Basic Memory's configuration and deletes the database, but leaves files on disk unchanged. You can re-add the project later.
+</Warning>
+
+### Project Info
+
+View detailed information about a project:
+
+```bash
+basic-memory project info "project-name"
+```
+
+Output:
+```
+Project: work
+Path: /Users/alice/work-notes
+Status: Active
+Entities: 142
+Observations: 1,234
+Relations: 387
+Last synced: 2024-01-15 14:32:00
+```
+
+## Using Projects with MCP
+
+### Claude Desktop Configuration
+
+Configure Claude Desktop to use a specific project:
+
+<Tabs>
+  <Tab title="Single Project">
+    Configure for one project:
+    
+    ```json
+    {
+      "mcpServers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp",
+            "--project",
+            "work"
+          ]
+        }
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Multiple Projects">
+    Set up multiple MCP servers for different projects:
+    
+    ```json
+    {
+      "mcpServers": {
+        "basic-memory-work": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp",
+            "--project",
+            "work"
+          ]
+        },
+        "basic-memory-research": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp",
+            "--project",
+            "research"
+          ]
+        }
+      }
+    }
+    ```
+    
+    Each server appears separately in Claude Desktop.
+  </Tab>
+  
+  <Tab title="Default Project">
+    Use the default project:
+    
+    ```json
+    {
+      "mcpServers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp"
+          ]
+        }
+      }
+    }
+    ```
+    
+    Uses whichever project is set as default.
+  </Tab>
+</Tabs>
+
+### VS Code Configuration
+
+Configure VS Code for project-specific setups:
+
+<Steps>
+  <Step title="Create Workspace Settings">
+    In your repository, create `.vscode/mcp.json`:
+    
+    ```json
+    {
+      "servers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp",
+            "--project",
+            "my-project"
+          ]
+        }
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Commit Configuration">
+    Share the configuration with your team:
+    
+    ```bash
+    git add .vscode/mcp.json
+    git commit -m "Add Basic Memory configuration"
+    ```
+  </Step>
+  
+  <Step title="Team Setup">
+    Team members need to:
+    
+    1. Install Basic Memory
+    2. Create the same project:
+       ```bash
+       basic-memory project add "my-project" ~/path/to/shared/docs
+       ```
+    3. Sync the project:
+       ```bash
+       basic-memory sync --project my-project
+       ```
+  </Step>
+</Steps>
+
+## Project Synchronization
+
+### Manual Sync
+
+Sync a specific project:
+
+```bash
+basic-memory sync --project "project-name"
+```
+
+### Watch Mode
+
+Real-time sync for active development:
+
+```bash
+basic-memory sync --watch --project "project-name"
+```
+
+### Sync Status
+
+Check sync status for a project:
+
+```bash
+basic-memory status --project "project-name"
+```
+
+## Cloud Projects
+
+<Note>
+  Cloud features require an active Basic Memory Cloud subscription.
+</Note>
+
+### Cloud Authentication
+
+Authenticate with Basic Memory Cloud:
+
+```bash
+basic-memory cloud login
+```
+
+### Set Project to Cloud Mode
+
+Route a project through the cloud:
+
+```bash
+basic-memory project set-cloud "project-name"
+```
+
+This enables:
+- Cross-device access
+- Team collaboration
+- Cloud backup
+- Web and mobile access
+
+### Set Project to Local Mode
+
+Revert a project to local-only:
+
+```bash
+basic-memory project set-local "project-name"
+```
+
+### Bidirectional Sync
+
+Sync between local and cloud:
+
+```bash
+# One-way sync (local → cloud)
+basic-memory project sync "project-name"
+
+# Two-way sync
+basic-memory project bisync "project-name"
+```
+
+### Project Integrity Check
+
+Verify project consistency:
+
+```bash
+basic-memory project check "project-name"
+```
+
+## Project Organization Strategies
+
+### By Domain
+
+Organize by knowledge domain:
+
+```bash
+basic-memory project add "work" ~/knowledge/work
+basic-memory project add "personal" ~/knowledge/personal
+basic-memory project add "learning" ~/knowledge/learning
+```
+
+### By Client
+
+Separate client work:
+
+```bash
+basic-memory project add "client-acme" ~/clients/acme/knowledge
+basic-memory project add "client-beta" ~/clients/beta/knowledge
+basic-memory project add "internal" ~/knowledge/internal
+```
+
+### By Time Period
+
+Archive by time:
+
+```bash
+basic-memory project add "current" ~/knowledge/current
+basic-memory project add "archive-2023" ~/knowledge/archive/2023
+basic-memory project add "archive-2024" ~/knowledge/archive/2024
+```
+
+### By Team
+
+Team-based organization:
+
+```bash
+basic-memory project add "engineering" ~/teams/engineering
+basic-memory project add "product" ~/teams/product
+basic-memory project add "design" ~/teams/design
+```
+
+## Cross-Project References
+
+### Memory URLs with Projects
+
+Reference notes in other projects using memory:// URLs:
+
+```
+memory://project-name/note-path
+```
+
+Examples:
+```
+memory://work/authentication-system
+memory://research/semantic-search-paper
+memory://personal/coffee-brewing
+```
+
+### Building Context Across Projects
+
+When using `build_context`, specify the project:
+
+```python
+build_context(
+    "memory://work/authentication-system",
+    project="work"
+)
+```
+
+### Searching Multiple Projects
+
+Search within specific projects:
+
+```python
+# Search in work project
+search_notes("authentication", project="work")
+
+# Search in research project
+search_notes("embeddings", project="research")
+```
+
+<Note>
+  Each MCP server instance is tied to one project. To search across projects, you need multiple MCP server configurations.
+</Note>
+
+## Project Migration
+
+### Moving Projects
+
+Move a project to a new location:
+
+<Steps>
+  <Step title="Move Files">
+    ```bash
+    mv ~/old-location ~/new-location
+    ```
+  </Step>
+  
+  <Step title="Update Configuration">
+    ```bash
+    basic-memory project move "project-name" ~/new-location
+    ```
+  </Step>
+  
+  <Step title="Verify">
+    ```bash
+    basic-memory project info "project-name"
+    ```
+  </Step>
+</Steps>
+
+### Exporting Projects
+
+Back up or export a project:
+
+```bash
+# Create archive
+tar -czf project-backup.tar.gz ~/path/to/project
+
+# Copy to backup location
+cp project-backup.tar.gz ~/backups/
+```
+
+### Importing Projects
+
+Restore from backup:
+
+<Steps>
+  <Step title="Extract Archive">
+    ```bash
+    tar -xzf project-backup.tar.gz -C ~/restored-project
+    ```
+  </Step>
+  
+  <Step title="Add Project">
+    ```bash
+    basic-memory project add "restored" ~/restored-project
+    ```
+  </Step>
+  
+  <Step title="Sync">
+    ```bash
+    basic-memory sync --project "restored"
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep projects focused">
+    Each project should have a clear scope:
+    
+    **Good:**
+    - `work` - All work-related knowledge
+    - `research-ml` - Machine learning research
+    - `personal-health` - Health and fitness notes
+    
+    **Avoid:**
+    - `misc` - Mixed unrelated content
+    - `everything` - Single project for all knowledge
+  </Accordion>
+  
+  <Accordion title="Use consistent naming">
+    Choose a naming convention:
+    
+    ```bash
+    # Domain-based
+    work, personal, research
+    
+    # Team-based
+    team-eng, team-product, team-design
+    
+    # Client-based
+    client-acme, client-beta, client-gamma
+    ```
+  </Accordion>
+  
+  <Accordion title="Regular backups">
+    Back up important projects:
+    
+    ```bash
+    # Automated backup script
+    #!/bin/bash
+    DATE=$(date +%Y%m%d)
+    tar -czf ~/backups/work-$DATE.tar.gz ~/work-notes
+    ```
+  </Accordion>
+  
+  <Accordion title="Sync before switching">
+    Always sync before switching projects:
+    
+    ```bash
+    basic-memory sync --project current
+    basic-memory project default new-project
+    basic-memory sync --project new-project
+    ```
+  </Accordion>
+  
+  <Accordion title="Document project purpose">
+    Create a README in each project:
+    
+    ```markdown
+    # Work Knowledge Base
+    
+    This project contains all work-related documentation including:
+    - Architecture decisions
+    - Meeting notes
+    - Technical documentation
+    - Project planning
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Project not found">
+    Check available projects:
+    
+    ```bash
+    basic-memory project list
+    ```
+    
+    Add the project if missing:
+    
+    ```bash
+    basic-memory project add "project-name" ~/path
+    ```
+  </Accordion>
+  
+  <Accordion title="Sync issues">
+    Diagnose sync problems:
+    
+    ```bash
+    # Check status
+    basic-memory status --project "project-name"
+    
+    # Run doctor
+    basic-memory doctor --project "project-name"
+    
+    # Force sync
+    basic-memory sync --project "project-name"
+    ```
+  </Accordion>
+  
+  <Accordion title="Path conflicts">
+    If multiple projects use the same path:
+    
+    ```bash
+    # List projects to find conflict
+    basic-memory project list
+    
+    # Update path for one project
+    basic-memory project move "project-name" ~/new-path
+    ```
+  </Accordion>
+  
+  <Accordion title="Database corruption">
+    Rebuild database if corrupted:
+    
+    ```bash
+    # Backup current database
+    cp ~/.basic-memory/projects/project-name.db ~/backup.db
+    
+    # Remove and re-add project
+    basic-memory project remove "project-name"
+    basic-memory project add "project-name" ~/path
+    
+    # Re-sync
+    basic-memory sync --project "project-name"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Notes" icon="pen" href="/guides/writing-notes">
+    Learn how to structure notes effectively
+  </Card>
+  
+  <Card title="Searching" icon="magnifying-glass" href="/guides/searching">
+    Master search across projects
+  </Card>
+  
+  <Card title="Cloud Sync" icon="cloud" href="/cloud/overview">
+    Enable cloud features for projects
+  </Card>
+  
+  <Card title="CLI Reference" icon="terminal" href="/api/cli/overview">
+    Complete CLI documentation
+  </Card>
+</CardGroup>

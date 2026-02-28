@@ -1,0 +1,396 @@
+---
+title: Project Commands
+description: Manage multiple Basic Memory projects
+---
+
+Project commands allow you to manage multiple Basic Memory knowledge bases, each with its own directory and configuration.
+
+## bm project list
+
+List all Basic Memory projects from local and cloud.
+
+```bash
+bm project list [OPTIONS]
+```
+
+### Options
+
+- `--local` - Force local routing for this command
+- `--cloud` - Force cloud API routing
+- `--workspace TEXT` - Cloud workspace name or tenant_id
+- `--json` - Output in JSON format
+
+### Examples
+
+```bash
+# List all projects
+bm project list
+
+# List local projects only
+bm project list --local
+
+# List cloud projects
+bm project list --cloud --workspace Personal
+
+# Get JSON output for scripting
+bm project list --json
+```
+
+### Output
+
+```bash
+                        Basic Memory Projects
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━┓
+┃ Name      ┃ Local Path              ┃ Cloud Path   ┃ Workspace   ┃ CLI Route ┃ MCP (stdio) ┃ Sync ┃ Default ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━┩
+│ research  │ ~/Documents/research    │              │             │ local     │ local       │      │ [X]     │
+│ notes     │ ~/Documents/notes       │ notes        │ Personal    │ cloud     │ local       │ [X]  │         │
+└───────────┴─────────────────────────┴──────────────┴─────────────┴───────────┴─────────────┴──────┴─────────┘
+```
+
+## bm project add
+
+Add a new project to Basic Memory.
+
+```bash
+bm project add NAME [PATH] [OPTIONS]
+```
+
+### Arguments
+
+- `NAME` - Name of the project
+- `PATH` - Path to project directory (required for local mode)
+
+### Options
+
+- `--local-path TEXT` - Local sync path for cloud mode (optional)
+- `--default` - Set as default project
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Add a local project
+bm project add research ~/Documents/research
+
+# Add and set as default
+bm project add research ~/Documents/research --default
+
+# Add cloud project without local sync
+bm project add notes --cloud
+
+# Add cloud project with local sync
+bm project add notes --cloud --local-path ~/Documents/notes
+```
+
+### Output
+
+```bash
+Project 'research' created successfully
+```
+
+## bm project remove
+
+Remove a project from Basic Memory.
+
+```bash
+bm project remove NAME [OPTIONS]
+```
+
+### Arguments
+
+- `NAME` - Name of the project to remove
+
+### Options
+
+- `--delete-notes` - Delete project files from disk
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Remove project (keeps files)
+bm project remove research
+
+# Remove project and delete files
+bm project remove research --delete-notes
+
+# Remove cloud project
+bm project remove notes --cloud
+```
+
+### Output
+
+```bash
+Project 'research' removed successfully
+Note: Local files remain at ~/Documents/research
+```
+
+## bm project default
+
+Set the default project used when no project is specified.
+
+```bash
+bm project default NAME [OPTIONS]
+```
+
+### Arguments
+
+- `NAME` - Name of the project to set as default
+
+### Options
+
+- `--local` - Force local API routing (required in cloud mode)
+
+### Examples
+
+```bash
+# Set default project
+bm project default research
+
+# Set default in cloud mode
+bm project default research --local
+```
+
+### Output
+
+```bash
+Default project set to 'research'
+```
+
+## bm project move
+
+Move a local project to a new filesystem location.
+
+```bash
+bm project move NAME NEW_PATH
+```
+
+### Arguments
+
+- `NAME` - Name of the project to move
+- `NEW_PATH` - New absolute path for the project
+
+### Examples
+
+```bash
+# Move project to new location
+bm project move research /home/user/Documents/research-new
+```
+
+### Output
+
+```bash
+Project configuration updated successfully
+
+╭─────────────── Manual File Movement Required ────────────────╮
+│ IMPORTANT: Project configuration updated successfully.       │
+│                                                               │
+│ You must manually move your project files from the old       │
+│ location to:                                                  │
+│ /home/user/Documents/research-new                            │
+│                                                               │
+│ Basic Memory has only updated the configuration - your files │
+│ remain in their original location.                           │
+╰───────────────────────────────────────────────────────────────╯
+```
+
+## bm project set-cloud
+
+Set a project to cloud mode (route through cloud API).
+
+```bash
+bm project set-cloud NAME [OPTIONS]
+```
+
+### Arguments
+
+- `NAME` - Name of the project to route through cloud
+
+### Options
+
+- `--workspace TEXT` - Cloud workspace name or tenant_id
+
+### Examples
+
+```bash
+# Set project to cloud mode
+bm project set-cloud research
+
+# Set with specific workspace
+bm project set-cloud research --workspace Personal
+bm project set-cloud research --workspace 11111111-...
+```
+
+### Output
+
+```bash
+Project 'research' set to cloud mode
+Workspace: 11111111-2222-3333-4444-555555555555
+MCP tools and CLI commands for this project will route through cloud
+```
+
+## bm project set-local
+
+Revert a project to local mode (use in-process ASGI transport).
+
+```bash
+bm project set-local NAME
+```
+
+### Arguments
+
+- `NAME` - Name of the project to revert to local mode
+
+### Examples
+
+```bash
+# Revert to local mode
+bm project set-local research
+```
+
+### Output
+
+```bash
+Project 'research' set to local mode
+MCP tools and CLI commands for this project will use local transport
+```
+
+## bm project ls
+
+List files in a project.
+
+```bash
+bm project ls --name NAME [PATH] [OPTIONS]
+```
+
+### Arguments
+
+- `PATH` - Path within project (optional)
+
+### Options
+
+- `--name TEXT` - Project name to list files from (required)
+- `--local` - List files from local project instance
+- `--cloud` - List files from cloud project instance
+
+### Examples
+
+```bash
+# List all files
+bm project ls --name research
+
+# List files in subdirectory
+bm project ls --name research notes/
+
+# List local files explicitly
+bm project ls --name research --local
+
+# List cloud files
+bm project ls --name research --cloud
+```
+
+### Output
+
+```bash
+Files in research (LOCAL):
+       512 README.md
+      2048 specs/search.md
+      1024 notes/meeting-2024-01-15.md
+
+Total: 3 files
+```
+
+## bm project info
+
+Display detailed information and statistics about a project.
+
+```bash
+bm project info NAME [OPTIONS]
+```
+
+### Arguments
+
+- `NAME` - Name of the project
+
+### Options
+
+- `--json` - Output in JSON format
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Show project info
+bm project info research
+
+# Get JSON output
+bm project info research --json
+
+# Check cloud project
+bm project info research --cloud
+```
+
+### Output
+
+```bash
+╭─────────────────────────── research ────────────────────────────╮
+│ Knowledge Graph                         Embeddings              │
+│ Entities            42                  ● Semantic Search  Ena… │
+│ Observations        156                   Provider         fas… │
+│ Relations           73                    Model            all… │
+│ Unresolved          2                     Indexed          ███… │
+│ Isolated            5                     Chunks           248  │
+│                                           ● Status         Up … │
+│                                                                 │
+│ Note Types                                                      │
+│             spec ███████████████████████████████████  15       │
+│          meeting ████████████████████  10                      │
+│           person ██████████  5                                 │
+│             task █████  3                                      │
+│              doc ███  2                                        │
+│ +3 more types                                                  │
+│                                                                 │
+│ ~/Documents/research  default: True  2024-01-15 14:30          │
+│                                                    v0.15.0      │
+╰─────────────────────────────────────────────────────────────────╯
+```
+
+## Project Sync Commands
+
+For bidirectional cloud synchronization, see the bisync commands in [Cloud Commands](/api/cli/cloud-commands).
+
+## Routing Flags
+
+Most project commands support routing flags:
+
+- `--local` - Force local routing (ignore cloud mode)
+- `--cloud` - Force cloud routing (override local mode)
+
+These flags cannot be used together. When neither flag is specified:
+
+- The command uses the project's configured mode (`local` or `cloud`)
+- Cloud projects require authentication via API key or OAuth
+
+## Working with Workspaces
+
+Cloud projects can be associated with specific workspaces:
+
+```bash
+# Set project to cloud with workspace
+bm project set-cloud research --workspace Personal
+
+# List projects in specific workspace
+bm project list --workspace Personal
+```
+
+Workspaces allow you to:
+
+- Organize projects by team or context
+- Share projects with other users
+- Separate personal and work projects
+
+See [Cloud Commands](/api/cli/cloud-commands) for workspace management.

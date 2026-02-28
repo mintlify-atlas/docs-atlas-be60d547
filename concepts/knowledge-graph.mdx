@@ -1,0 +1,386 @@
+---
+title: Knowledge Graph
+description: Understanding entities, observations, and relations in Basic Memory's knowledge graph
+---
+
+Basic Memory builds a knowledge graph from your Markdown files, where files become nodes (entities) connected by semantic relationships. This graph structure enables AI assistants to navigate and understand your knowledge contextually.
+
+## Core Concepts
+
+### Entities
+
+An **entity** is any concept, document, or idea represented as a Markdown file. Every file in your project becomes an entity in the knowledge graph.
+
+```yaml
+# Entity properties
+id: 42                           # Database identifier
+external_id: "a1b2c3d4..."        # UUID for API references
+title: "Coffee Brewing Methods"   # From frontmatter or filename
+type: "note"                      # Entity type
+permalink: "coffee-brewing-methods" # Stable URI
+file_path: "coffee/brewing.md"   # Relative path from project
+checksum: "sha256..."             # For change detection
+project_id: 1                     # Which project owns this
+```
+
+#### Entity Types
+
+The `type` field (default: `note`) categorizes entities:
+
+- `note` - General knowledge notes
+- `Person` - People in your network
+- `Project` - Projects or initiatives
+- `Meeting` - Meeting notes
+- `schema` - Schema definitions (see [Schemas](/guides/schemas))
+- Custom types - Any string you choose
+
+<Tip>
+Capitalize custom types to distinguish them from built-in types. For example: `Person`, `Organization`, `Book`, `Recipe`.
+</Tip>
+
+### Observations
+
+An **observation** is a categorized fact about an entity. Observations let you structure information within a note without creating separate files.
+
+```python
+# Observation model (from models/knowledge.py)
+class Observation:
+    id: int
+    entity_id: int               # Parent entity
+    category: str                # Classification
+    content: str                 # The fact itself
+    tags: list[str]              # Inline tags
+    context: str                 # Supporting details
+```
+
+#### Observation Syntax
+
+```markdown
+- [category] content text #tag1 #tag2 (optional context)
+```
+
+| Part | Required | Description |
+|------|----------|-------------|
+| `[category]` | Yes | Classification in square brackets |
+| content | Yes | The fact or statement |
+| `#tags` | No | Space-separated hashtags |
+| `(context)` | No | Parenthesized supporting details at end |
+
+#### Example Observations
+
+```markdown
+# Coffee Brewing Methods
+
+- [method] Pour over provides more flavor clarity than French press
+- [technique] Water temperature at 205°F extracts optimal compounds #brewing
+- [preference] Ethiopian beans work well with lighter roasts (personal experience)
+- [tip] Always use freshly ground beans #quality
+- [fact] James Hoffman recommends 30-second bloom time
+- [question] Does grind size affect extraction speed?
+```
+
+Each creates an observation linked to the "Coffee Brewing Methods" entity.
+
+#### Repeated Categories (Arrays)
+
+Use the same category multiple times to create array-like data:
+
+```markdown
+# Paul Graham
+
+- [name] Paul Graham
+- [expertise] Startups
+- [expertise] Lisp programming
+- [expertise] Essay writing
+- [role] Co-founder of Y Combinator
+```
+
+This creates one `name`, one `role`, and three `expertise` observations.
+
+#### What's NOT an Observation
+
+The parser excludes these patterns:
+
+| Pattern | Example | Reason |
+|---------|---------|--------|
+| Checkboxes | `- [ ] Todo item`, `- [x] Done` | Task list syntax |
+| Markdown links | `- [text](url)` | URL link syntax |
+| Bare wiki links | `- [[Target]]` | Treated as relation instead |
+
+<Info>
+A list item with `#tags` but no `[category]` is still parsed - tags are extracted and category defaults to `Note`.
+</Info>
+
+### Relations
+
+A **relation** is a directional connection between two entities. Relations form the edges of your knowledge graph.
+
+```python
+# Relation model (from models/knowledge.py)
+class Relation:
+    id: int
+    from_id: int                 # Source entity
+    to_id: int                   # Target entity (when resolved)
+    to_name: str                 # Target identifier
+    relation_type: str           # Type of connection
+    context: str                 # Optional supporting details
+    project_id: int              # Project scope
+```
+
+#### Relation Types
+
+There are two kinds of relations:
+
+<Tabs>
+  <Tab title="Explicit Relations">
+    Written as list items with relation type and wiki link:
+
+    ```markdown
+    - relation_type [[Target Entity]] (optional context)
+    ```
+
+    **Examples:**
+    ```markdown
+    - implements [[Search Design]]
+    - depends_on [[Database Schema]]
+    - works_at [[Y Combinator]] (co-founder)
+    - inspired_by [[Local-First Software]]
+    - part_of [[Q1 Planning]]
+    ```
+
+    If you omit the relation type, it defaults to `relates_to`:
+    ```markdown
+    - [[Some Entity]]  # Creates "relates_to" relation
+    ```
+  </Tab>
+  <Tab title="Inline Relations">
+    Wiki links in regular prose create implicit `links_to` relations:
+
+    ```markdown
+    This builds on [[Core Design]] and uses [[Utility Functions]].
+    The approach was inspired by [[Local-First Software]].
+    ```
+
+    Creates three `links_to` relations automatically.
+
+    <Warning>
+    Inline relations don't support custom relation types or context - use explicit relations for those.
+    </Warning>
+  </Tab>
+</Tabs>
+
+#### Common Relation Types
+
+Convention patterns (not a fixed set - use any text):
+
+- **Code/Design**: `implements`, `depends_on`, `extends`, `refactors`
+- **Organization**: `part_of`, `contains`, `belongs_to`, `categorized_as`
+- **Temporal**: `follows`, `precedes`, `supersedes`
+- **People**: `works_at`, `authored`, `collaborated_with`, `mentored_by`
+- **Inspiration**: `inspired_by`, `based_on`, `contrasts_with`, `similar_to`
+- **Generic**: `relates_to`, `links_to`
+
+#### Forward References
+
+Relations can reference entities that don't exist yet:
+
+```markdown
+# Current Note
+
+- implements [[Future Feature]]  # "Future Feature" doesn't exist yet
+```
+
+Basic Memory tracks these as **unresolved relations** (`to_id` is null, `to_name` is set). When you create "Future Feature" later, the relation automatically resolves.
+
+## Graph Traversal
+
+AI assistants traverse your knowledge graph by following relations:
+
+```markdown
+# Starting Point: Coffee Brewing Methods
+
+- relates_to [[Coffee Bean Origins]]
+- requires [[Proper Grinding Technique]]
+- contrasts_with [[Tea Brewing Methods]]
+```
+
+When an AI loads "Coffee Brewing Methods," it can:
+
+1. Follow `relates_to` → Read "Coffee Bean Origins"
+2. Follow `requires` → Read "Proper Grinding Technique"
+3. Follow `contrasts_with` → Read "Tea Brewing Methods"
+
+This builds rich context spanning multiple documents.
+
+### Depth-Limited Traversal
+
+The `build_context` MCP tool supports depth limits:
+
+```python
+# Depth 1: Only direct neighbors
+build_context("memory://coffee-brewing-methods", depth=1)
+
+# Depth 2: Neighbors + their neighbors
+build_context("memory://coffee-brewing-methods", depth=2)
+```
+
+This prevents exponential expansion in highly connected graphs.
+
+## Permalinks
+
+Every entity has a **permalink** - a stable identifier that persists even if the file moves:
+
+```yaml
+# Explicit permalink in frontmatter
+permalink: coffee-brewing-methods
+
+# Or auto-generated from title
+title: Coffee Brewing Methods
+# → permalink: coffee-brewing-methods
+```
+
+Permalinks enable:
+
+- **Stable references**: Links don't break when files move
+- **memory:// URLs**: `memory://coffee-brewing-methods`
+- **Pattern matching**: `memory://coffee*` finds all coffee-related notes
+
+### memory:// URL Patterns
+
+```markdown
+# By permalink
+memory://coffee-brewing-methods
+
+# By title (auto-resolves to permalink)
+memory://Coffee Brewing Methods
+
+# By path
+memory://coffee/brewing-methods
+
+# Pattern matching
+memory://coffee*              # Starts with "coffee"
+memory://*/methods            # Ends with "methods"
+memory://project/*/requirements  # Nested wildcard
+```
+
+See the [build_context tool](/mcp-tools/build-context) for details on URL-based graph navigation.
+
+## Graph Queries
+
+The knowledge graph supports several query patterns:
+
+### By Entity Type
+
+```markdown
+# Find all Person entities
+search_notes(entity_types=["Person"])
+
+# Find all meetings from last week
+search_notes(entity_types=["Meeting"], after_date="2024-01-15")
+```
+
+### By Observation Category
+
+```markdown
+# Find all observations in the "technique" category
+search for category:technique
+```
+
+### By Relation Type
+
+```markdown
+# Find entities that "implements" something
+search for relation:implements
+```
+
+### By Tags
+
+```markdown
+# Find observations tagged with #brewing
+search_notes(tags=["brewing"])
+```
+
+## Synthetic Permalinks
+
+Observations and relations generate synthetic permalinks based on their entity:
+
+```python
+# Observation permalink
+# Format: {entity_permalink}/observations/{category}/{content}
+"coffee-brewing-methods/observations/technique/water-temperature-205f"
+
+# Relation permalink
+# Format: {from_permalink}/{relation_type}/{to_permalink}
+"coffee-brewing-methods/requires/proper-grinding-technique"
+```
+
+These enable fine-grained references to specific facts within documents.
+
+## Graph Statistics
+
+Check your knowledge graph health:
+
+```bash
+# Project statistics
+basic-memory project info
+
+# Shows:
+# - Total entities
+# - Total observations
+# - Total relations
+# - Unresolved relations
+# - Entity type distribution
+```
+
+## Visualization
+
+Visualize your knowledge graph:
+
+```markdown
+# Create Obsidian canvas file
+canvas(
+  nodes=[...],
+  edges=[...],
+  title="My Knowledge Map"
+)
+```
+
+See [Canvas Visualization](/mcp-tools/canvas) for details.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep entities focused">
+    Each file should represent one concept. Break large topics into multiple linked files rather than creating massive documents.
+  </Accordion>
+  <Accordion title="Use consistent relation types">
+    Establish conventions for relation types in your domain. For example: always use `works_at` for employment, not `employed_by` or `works_for`.
+  </Accordion>
+  <Accordion title="Add context to relations">
+    Use the `(context)` field to clarify relationships:
+    ```markdown
+    - works_at [[Y Combinator]] (co-founder, 2005-2008)
+    ```
+  </Accordion>
+  <Accordion title="Leverage forward references">
+    Don't hesitate to link to concepts you haven't documented yet. This helps surface gaps in your knowledge graph.
+  </Accordion>
+  <Accordion title="Use observation tags">
+    Tags on observations enable fine-grained filtering:
+    ```markdown
+    - [tip] Use filtered water #quality #water
+    - [tip] Preheat your equipment #technique #temperature
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Markdown Format" icon="markdown" href="/concepts/markdown-format">
+    Complete syntax reference for notes
+  </Card>
+  <Card title="MCP Integration" icon="plug" href="/concepts/mcp-integration">
+    How AI assistants interact with the graph
+  </Card>
+</CardGroup>

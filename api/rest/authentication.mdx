@@ -1,0 +1,251 @@
+---
+title: Authentication
+description: JWT authentication and API key management for the Basic Memory REST API
+---
+
+Authentication is required for cloud deployments of Basic Memory. Local deployments do not require authentication.
+
+## Authentication Methods
+
+Basic Memory supports two authentication methods:
+
+1. **JWT Tokens** - OAuth2-based authentication for CLI and interactive use
+2. **API Keys** - Long-lived tokens for programmatic access
+
+## JWT Authentication (OAuth2)
+
+### Device Authorization Flow
+
+The CLI uses OAuth2 Device Authorization with PKCE for secure authentication:
+
+```bash
+basic-memory cloud login
+```
+
+This will:
+1. Generate a device code and PKCE challenge
+2. Open your browser to the authentication page
+3. Display a user code for verification
+4. Poll for token completion
+5. Save tokens securely to `~/.local/share/basic-memory/basic-memory-cloud.json`
+
+### Token Storage
+
+Tokens are stored in JSON format:
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "rt_abc123...",
+  "expires_at": 1709140800,
+  "token_type": "Bearer"
+}
+```
+
+File permissions are automatically set to `0600` for security.
+
+### Using JWT Tokens
+
+Include the JWT token in the Authorization header:
+
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  https://api.basicmemory.com/v2/projects
+```
+
+### Token Refresh
+
+Access tokens expire after 1 hour. The CLI automatically refreshes tokens using the refresh token:
+
+```bash
+# Tokens are refreshed automatically
+basic-memory cloud status
+```
+
+Manual refresh is not required, but you can re-login if needed:
+
+```bash
+basic-memory cloud logout
+basic-memory cloud login
+```
+
+## API Key Authentication
+
+### Creating API Keys
+
+API keys are ideal for server-to-server communication and automation:
+
+```bash
+basic-memory cloud create-key "Production Server"
+```
+
+Response:
+```json
+{
+  "key": "bmc_1234567890abcdef",
+  "name": "Production Server",
+  "created_at": "2026-02-28T14:30:00Z"
+}
+```
+
+<Warning>
+  API keys are only displayed once. Store them securely - they cannot be retrieved later.
+</Warning>
+
+### Setting API Keys
+
+Save an API key for per-project cloud routing:
+
+```bash
+basic-memory cloud set-key bmc_1234567890abcdef
+```
+
+This stores the key in your configuration file for automatic use.
+
+### Using API Keys
+
+Include the API key as a Bearer token:
+
+```bash
+curl -H "Authorization: Bearer bmc_1234567890abcdef" \
+  https://api.basicmemory.com/v2/projects
+```
+
+### API Key Format
+
+API keys follow this format:
+- Prefix: `bmc_` (Basic Memory Cloud)
+- Length: 32 characters (excluding prefix)
+- Character set: alphanumeric (a-z, A-Z, 0-9)
+
+Example: `bmc_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`
+
+## Per-Project Cloud Routing
+
+You can route individual projects through the cloud while keeping others local:
+
+```bash
+# Set API key
+basic-memory cloud set-key bmc_1234567890abcdef
+
+# Route specific project to cloud
+basic-memory project set-cloud research
+
+# Revert to local
+basic-memory project set-local research
+```
+
+MCP tools automatically use the correct routing based on project configuration.
+
+## Authentication Errors
+
+### 401 Unauthorized
+
+Missing or invalid authentication:
+
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+**Solutions:**
+- Verify your token/API key is included in the Authorization header
+- Check that the token hasn't expired
+- Ensure you're using the correct authentication method
+
+### 403 Forbidden
+
+Valid authentication but insufficient permissions:
+
+```json
+{
+  "detail": "Insufficient permissions"
+}
+```
+
+**Solutions:**
+- Verify your subscription is active
+- Check that your API key has the required scopes
+- Ensure you have access to the requested project
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Rotate API Keys Regularly">
+    Create new API keys and revoke old ones every 90 days:
+    
+    ```bash
+    # Create new key
+    basic-memory cloud create-key "Production Server v2"
+    
+    # Update your applications
+    # Then revoke the old key
+    basic-memory cloud revoke-key bmc_oldkey123
+    ```
+  </Accordion>
+
+  <Accordion title="Use Environment Variables">
+    Store API keys in environment variables, not in code:
+    
+    ```bash
+    export BASIC_MEMORY_API_KEY=bmc_1234567890abcdef
+    ```
+    
+    ```python
+    import os
+    api_key = os.getenv("BASIC_MEMORY_API_KEY")
+    ```
+  </Accordion>
+
+  <Accordion title="Limit API Key Scopes">
+    When creating API keys, limit their permissions to only what's needed:
+    
+    ```bash
+    # Read-only key
+    basic-memory cloud create-key "Analytics" --scope read
+    
+    # Full access key
+    basic-memory cloud create-key "CI/CD" --scope all
+    ```
+  </Accordion>
+
+  <Accordion title="Monitor API Usage">
+    Regularly review API key usage:
+    
+    ```bash
+    basic-memory cloud list-keys
+    ```
+    
+    Revoke unused or suspicious keys immediately.
+  </Accordion>
+</AccordionGroup>
+
+## Local Development
+
+When developing locally, authentication is disabled:
+
+```bash
+# Start local API server
+basic-memory api
+
+# No authentication required
+curl http://localhost:8000/v2/projects
+```
+
+To test authentication flows locally, set:
+
+```bash
+export BASIC_MEMORY_REQUIRE_AUTH=true
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Entities API" icon="file" href="/api/rest/entities">
+    Create and manage knowledge entities
+  </Card>
+  <Card title="Search API" icon="magnifying-glass" href="/api/rest/search">
+    Search your knowledge graph
+  </Card>
+</CardGroup>

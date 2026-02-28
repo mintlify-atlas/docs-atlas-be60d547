@@ -1,0 +1,627 @@
+---
+title: Cloud Commands
+description: Authentication and cloud synchronization
+---
+
+Cloud commands enable authentication, synchronization, and snapshot management with Basic Memory Cloud. Cloud features require an active subscription.
+
+## Authentication
+
+### bm cloud login
+
+Authenticate with Basic Memory Cloud using OAuth.
+
+```bash
+bm cloud login
+```
+
+### Examples
+
+```bash
+# Start OAuth flow
+bm cloud login
+```
+
+### Output
+
+```bash
+Opening browser for authentication...
+Please approve the authorization in your browser.
+
+Verifying subscription access...
+Cloud authentication successful
+Cloud host ready: https://cloud.basicmemory.ai
+```
+
+### Subscription Required
+
+If you don't have an active subscription:
+
+```bash
+Subscription Required
+
+This feature requires an active Basic Memory Cloud subscription.
+
+OSS discount code: OSS20 (20% off for 3 months)
+
+Subscribe at: https://basicmemory.ai/pricing
+
+Once you have an active subscription, run bm cloud login again.
+```
+
+### bm cloud logout
+
+Remove stored OAuth tokens.
+
+```bash
+bm cloud logout
+```
+
+### Examples
+
+```bash
+# Log out of cloud
+bm cloud logout
+```
+
+### Output
+
+```bash
+Logged out from Basic Memory Cloud
+API key (if configured) remains available for cloud project routing.
+```
+
+### bm cloud status
+
+Check cloud authentication state and cloud instance health.
+
+```bash
+bm cloud status
+```
+
+### Examples
+
+```bash
+# Check cloud status
+bm cloud status
+```
+
+### Output
+
+```bash
+Cloud Authentication Status
+  Host: https://cloud.basicmemory.ai
+  API Key: configured
+  OAuth: token valid
+
+Checking cloud instance health...
+Cloud instance is healthy
+  Status: healthy
+  Version: 0.15.0
+  Timestamp: 2024-01-15T14:30:00Z
+
+To sync projects, use: bm project bisync --name <project>
+```
+
+## Cloud Setup
+
+### bm cloud setup
+
+Set up cloud sync by installing rclone and configuring credentials.
+
+```bash
+bm cloud setup
+```
+
+This command:
+
+1. Installs rclone (if not present)
+2. Gets tenant information from cloud
+3. Generates secure sync credentials
+4. Configures rclone remote
+
+### Examples
+
+```bash
+# Run initial cloud setup
+bm cloud setup
+```
+
+### Output
+
+```bash
+Basic Memory Cloud Setup
+Setting up cloud sync with rclone...
+
+Step 1: Installing rclone...
+rclone already installed: /usr/local/bin/rclone
+
+Step 2: Getting tenant information...
+Found tenant: 11111111-2222-3333-4444-555555555555
+
+Step 3: Generating sync credentials...
+Generated secure credentials
+
+Step 4: Configuring rclone remote...
+Configured rclone remote 'basicmemory'
+
+Cloud setup completed successfully!
+
+Next steps:
+1. Add a project with local sync path:
+   bm project add research --cloud --local-path ~/Documents/research
+
+   Or configure sync for an existing project:
+   bm project sync-setup research ~/Documents/research
+
+2. Preview the initial sync (recommended):
+   bm project bisync --name research --resync --dry-run
+
+3. If all looks good, run the actual sync:
+   bm project bisync --name research --resync
+
+4. Subsequent syncs (no --resync needed):
+   bm project bisync --name research
+
+Tip: Always use --dry-run first to preview changes before syncing
+```
+
+## API Key Management
+
+### bm cloud api-key save
+
+Save an existing API key to local config.
+
+```bash
+bm cloud api-key save API_KEY
+```
+
+### Arguments
+
+- `API_KEY` - API key with `bmc_` prefix for cloud access
+
+### Examples
+
+```bash
+# Save API key
+bm cloud api-key save bmc_abc123xyz456...
+```
+
+### Output
+
+```bash
+API key saved
+Projects set to cloud mode will use this key for authentication
+Set a project to cloud mode: bm project set-cloud <name>
+```
+
+### bm cloud api-key create
+
+Create a new API key via the cloud API and save it locally.
+
+```bash
+bm cloud api-key create NAME
+```
+
+Requires active OAuth session (run `bm cloud login` first).
+
+### Arguments
+
+- `NAME` - Human-readable name for the API key
+
+### Examples
+
+```bash
+# Create API key
+bm cloud api-key create "my-laptop"
+```
+
+### Output
+
+```bash
+Creating API key 'my-laptop'...
+API key 'my-laptop' created and saved
+Projects set to cloud mode will use this key for authentication
+Set a project to cloud mode: bm project set-cloud <name>
+```
+
+## Snapshot Management
+
+### bm cloud snapshot create
+
+Create a new bucket snapshot.
+
+```bash
+bm cloud snapshot create DESCRIPTION
+```
+
+### Arguments
+
+- `DESCRIPTION` - Description for the snapshot
+
+### Examples
+
+```bash
+# Create snapshot
+bm cloud snapshot create "before major refactor"
+bm cloud snapshot create "daily backup"
+```
+
+### Output
+
+```bash
+Creating snapshot...
+Snapshot created successfully
+  ID: snap_abc123
+  Version: v1234567890
+  Created: 2024-01-15 14:30:00
+  Description: before major refactor
+```
+
+### bm cloud snapshot list
+
+List all bucket snapshots.
+
+```bash
+bm cloud snapshot list [OPTIONS]
+```
+
+### Options
+
+- `--limit, -l INTEGER` - Maximum number of snapshots to display (default: 10)
+
+### Examples
+
+```bash
+# List snapshots
+bm cloud snapshot list
+
+# List more snapshots
+bm cloud snapshot list --limit 20
+```
+
+### Output
+
+```bash
+Fetching snapshots...
+           Bucket Snapshots (15 total)
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
+┃ ID           ┃ Description           ┃ Auto ┃ Created             ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
+│ snap_abc123  │ before major refactor │ no   │ 2024-01-15 14:30:00 │
+│ snap_def456  │ daily backup          │ yes  │ 2024-01-14 02:00:00 │
+│ snap_ghi789  │ after migration       │ no   │ 2024-01-13 16:45:00 │
+└──────────────┴───────────────────────┴──────┴─────────────────────┘
+
+Showing 10 of 15 snapshots. Use --limit to see more.
+```
+
+### bm cloud snapshot show
+
+Show details of a specific snapshot.
+
+```bash
+bm cloud snapshot show SNAPSHOT_ID
+```
+
+### Arguments
+
+- `SNAPSHOT_ID` - The ID of the snapshot to show
+
+### Examples
+
+```bash
+# Show snapshot details
+bm cloud snapshot show snap_abc123
+```
+
+### Output
+
+```bash
+Snapshot Details
+  ID: snap_abc123
+  Bucket: basicmemory-11111111-2222-3333-4444-555555555555
+  Version: v1234567890
+  Name: snap_abc123
+  Description: before major refactor
+  Auto: no
+  Created: 2024-01-15 14:30:00
+```
+
+### bm cloud snapshot delete
+
+Delete a bucket snapshot.
+
+```bash
+bm cloud snapshot delete SNAPSHOT_ID [OPTIONS]
+```
+
+### Arguments
+
+- `SNAPSHOT_ID` - The ID of the snapshot to delete
+
+### Options
+
+- `--force, -f` - Skip confirmation prompt
+
+### Examples
+
+```bash
+# Delete snapshot (with confirmation)
+bm cloud snapshot delete snap_abc123
+
+# Delete without confirmation
+bm cloud snapshot delete snap_abc123 --force
+```
+
+### Output
+
+```bash
+Fetching snapshot details...
+
+Snapshot to delete:
+  ID: snap_abc123
+  Description: before major refactor
+  Created: 2024-01-15 14:30:00
+
+Are you sure you want to delete this snapshot? [y/N]: y
+Deleting snapshot...
+Snapshot snap_abc123 deleted successfully
+```
+
+### bm cloud snapshot browse
+
+Browse contents of a snapshot.
+
+```bash
+bm cloud snapshot browse SNAPSHOT_ID [OPTIONS]
+```
+
+### Arguments
+
+- `SNAPSHOT_ID` - The ID of the snapshot to browse
+
+### Options
+
+- `--prefix, -p TEXT` - Filter files by path prefix (e.g., 'notes/')
+
+### Examples
+
+```bash
+# Browse all files
+bm cloud snapshot browse snap_abc123
+
+# Browse specific directory
+bm cloud snapshot browse snap_abc123 --prefix notes/
+```
+
+### Output
+
+```bash
+Snapshot Contents (23 files)
+  README.md (1 KB)
+  specs/search.md (3 KB)
+  notes/meeting-2024-01-15.md (2 KB)
+  notes/meeting-2024-01-14.md (1 KB)
+  ...
+
+Use 'bm cloud restore <path> --snapshot snap_abc123' to restore files
+```
+
+## Restore from Snapshot
+
+### bm cloud restore
+
+Restore files from a snapshot.
+
+```bash
+bm cloud restore PATH [OPTIONS]
+```
+
+### Arguments
+
+- `PATH` - Local path to restore files to
+
+### Options
+
+- `--snapshot TEXT` - Snapshot ID to restore from (required)
+- `--prefix TEXT` - Only restore files matching prefix
+- `--dry-run` - Preview what would be restored
+
+### Examples
+
+```bash
+# Preview restore
+bm cloud restore ~/Documents/research --snapshot snap_abc123 --dry-run
+
+# Restore all files
+bm cloud restore ~/Documents/research --snapshot snap_abc123
+
+# Restore specific directory
+bm cloud restore ~/Documents/research --snapshot snap_abc123 --prefix notes/
+```
+
+## Project Synchronization
+
+### bm project bisync
+
+Bidirectional sync between local and cloud.
+
+```bash
+bm project bisync --name NAME [OPTIONS]
+```
+
+### Options
+
+- `--name TEXT` - Project name to sync (required)
+- `--resync` - Force resynchronization (required for first sync)
+- `--dry-run` - Preview changes without syncing
+- `--force` - Force sync even if there are conflicts
+
+### Examples
+
+```bash
+# Preview first sync
+bm project bisync --name research --resync --dry-run
+
+# Run first sync
+bm project bisync --name research --resync
+
+# Subsequent syncs
+bm project bisync --name research
+
+# Preview changes
+bm project bisync --name research --dry-run
+```
+
+### Output
+
+```bash
+Syncing project 'research'...
+Running bidirectional sync...
+
+Changes to apply:
+  Local -> Cloud:  3 new, 2 modified, 0 deleted
+  Cloud -> Local:  1 new, 1 modified, 0 deleted
+
+Sync completed successfully
+Last sync: 2024-01-15 14:30:00
+```
+
+## Promo Messages
+
+### bm cloud promo
+
+Enable or disable CLI cloud promo messages.
+
+```bash
+bm cloud promo [OPTIONS]
+```
+
+### Options
+
+- `--on/--off` - Enable or disable CLI promos (default: on)
+
+### Examples
+
+```bash
+# Disable promo messages
+bm cloud promo --off
+
+# Re-enable promo messages
+bm cloud promo --on
+```
+
+### Output
+
+```bash
+Cloud promo messages disabled
+```
+
+## Authentication Methods
+
+Basic Memory Cloud supports two authentication methods:
+
+### OAuth (Recommended)
+
+Best for interactive CLI use:
+
+```bash
+bm cloud login
+```
+
+- Opens browser for secure authentication
+- Tokens refresh automatically
+- Validates subscription status
+
+### API Keys
+
+Best for automation and scripts:
+
+```bash
+# Create and save API key
+bm cloud login
+bm cloud api-key create "automation"
+
+# Or save existing key
+bm cloud api-key save bmc_abc123...
+```
+
+- Long-lived credentials
+- No browser interaction needed
+- Per-project cloud routing
+
+## Cloud Workflows
+
+### Initial Cloud Setup
+
+```bash
+# 1. Authenticate
+bm cloud login
+
+# 2. Configure sync
+bm cloud setup
+
+# 3. Add cloud project
+bm project add research --cloud --local-path ~/Documents/research
+
+# 4. Preview sync
+bm project bisync --name research --resync --dry-run
+
+# 5. Run sync
+bm project bisync --name research --resync
+```
+
+### Regular Sync
+
+```bash
+# Sync with preview
+bm project bisync --name research --dry-run
+bm project bisync --name research
+```
+
+### Backup and Restore
+
+```bash
+# Create snapshot
+bm cloud snapshot create "before updates"
+
+# Make changes...
+
+# If needed, restore from snapshot
+bm cloud snapshot list
+bm cloud snapshot browse snap_abc123
+bm cloud restore ~/Documents/research --snapshot snap_abc123
+```
+
+## Error Handling
+
+Common cloud command errors:
+
+### Subscription Required
+
+```bash
+Subscription Required
+
+This feature requires an active Basic Memory Cloud subscription.
+Subscribe at: https://basicmemory.ai/pricing
+```
+
+Solution: Subscribe at the provided URL, then run `bm cloud login`.
+
+### Authentication Failed
+
+```bash
+Cloud health check failed: 401 Unauthorized
+Try re-authenticating with 'bm cloud login'.
+```
+
+Solution: Run `bm cloud login` or `bm cloud api-key save <key>`.
+
+### Sync Conflicts
+
+```bash
+Sync failed: conflicts detected
+```
+
+Solution: Review conflicts, resolve manually, then use `--force` or `--resync`.

@@ -1,0 +1,607 @@
+---
+title: Tool Commands
+description: Access MCP tools via CLI
+---
+
+Tool commands provide CLI access to Basic Memory's Model Context Protocol (MCP) tools. These commands output JSON for easy scripting and integration.
+
+## bm tool write-note
+
+Create or update a markdown note.
+
+```bash
+bm tool write-note --title TITLE --folder FOLDER [OPTIONS]
+```
+
+### Options
+
+- `--title TEXT` - The title of the note (required)
+- `--folder TEXT` - The folder to create the note in (required)
+- `--content TEXT` - The content of the note (or pipe from stdin)
+- `--tags TEXT` - Tags to apply to the note (repeatable)
+- `--project TEXT` - Project to write to (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Write note with content
+bm tool write-note --title "My Note" --folder "notes" --content "Note content"
+
+# Write from stdin
+echo "content" | bm tool write-note --title "My Note" --folder "notes"
+
+# Write with tags
+bm tool write-note --title "My Note" --folder "notes" --content "Content" --tags python --tags async
+
+# Force local routing
+bm tool write-note --title "My Note" --folder "notes" --content "Content" --local
+```
+
+### Output
+
+```json
+{
+  "path": "notes/my-note.md",
+  "title": "My Note",
+  "permalink": "my-note",
+  "message": "Note created successfully"
+}
+```
+
+## bm tool read-note
+
+Read a markdown note from the knowledge base.
+
+```bash
+bm tool read-note IDENTIFIER [OPTIONS]
+```
+
+### Arguments
+
+- `IDENTIFIER` - Note title, permalink, or memory:// URL
+
+### Options
+
+- `--include-frontmatter` - Include YAML frontmatter in output
+- `--page INTEGER` - Page number for pagination (default: 1)
+- `--page-size INTEGER` - Results per page (default: 10)
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Read by title
+bm tool read-note my-note
+
+# Read with frontmatter
+bm tool read-note my-note --include-frontmatter
+
+# Read with pagination
+bm tool read-note my-note --page 2 --page-size 5
+
+# Read from specific project
+bm tool read-note my-note --project research
+```
+
+### Output
+
+```json
+{
+  "identifier": "my-note",
+  "title": "My Note",
+  "content": "# My Note\n\nNote content here...",
+  "path": "notes/my-note.md",
+  "page": 1,
+  "total_pages": 1
+}
+```
+
+## bm tool edit-note
+
+Edit an existing markdown note.
+
+```bash
+bm tool edit-note IDENTIFIER --operation OPERATION --content CONTENT [OPTIONS]
+```
+
+### Arguments
+
+- `IDENTIFIER` - Note title, permalink, or memory:// URL
+
+### Options
+
+- `--operation TEXT` - Edit operation: append, prepend, find_replace, replace_section (required)
+- `--content TEXT` - Content for the operation (required)
+- `--find-text TEXT` - Text to find (for find_replace)
+- `--section TEXT` - Section heading (for replace_section)
+- `--expected-replacements INTEGER` - Expected replacement count (default: 1)
+- `--project TEXT` - Project to edit (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Append content
+bm tool edit-note my-note --operation append --content "new content"
+
+# Prepend content
+bm tool edit-note my-note --operation prepend --content "intro text"
+
+# Find and replace
+bm tool edit-note my-note --operation find_replace --find-text "old" --content "new"
+
+# Replace section
+bm tool edit-note my-note --operation replace_section --section "## Notes" --content "updated"
+```
+
+### Output
+
+```json
+{
+  "path": "notes/my-note.md",
+  "message": "Note updated successfully",
+  "operation": "append"
+}
+```
+
+## bm tool search-notes
+
+Search across all content in the knowledge base.
+
+```bash
+bm tool search-notes [QUERY] [OPTIONS]
+```
+
+### Arguments
+
+- `QUERY` - Search query string (optional with metadata filters)
+
+### Options
+
+- `--permalink` - Search permalink values
+- `--title` - Search title values
+- `--vector` - Use vector retrieval
+- `--hybrid` - Use hybrid retrieval
+- `--after_date TEXT` - Results after date (e.g., '2d', '1 week')
+- `--tag TEXT` - Filter by frontmatter tag (repeatable)
+- `--status TEXT` - Filter by frontmatter status
+- `--type TEXT` - Filter by frontmatter type (repeatable)
+- `--entity-type TEXT` - Filter by entity, observation, relation (repeatable)
+- `--meta TEXT` - Filter by key=value (repeatable)
+- `--filter TEXT` - JSON metadata filter (advanced)
+- `--page INTEGER` - Page number (default: 1)
+- `--page-size INTEGER` - Results per page (default: 10)
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Full-text search
+bm tool search-notes "python async"
+
+# Search by permalink
+bm tool search-notes --permalink "specs/*"
+
+# Search by title
+bm tool search-notes --title "meeting"
+
+# Filter by tags
+bm tool search-notes --tag python --tag async
+
+# Filter by metadata
+bm tool search-notes --meta status=draft
+
+# Recent items
+bm tool search-notes --after_date 7d
+
+# Combine filters
+bm tool search-notes "async" --tag python --after_date 1w
+
+# Vector search
+bm tool search-notes "semantic similarity" --vector
+
+# Hybrid search
+bm tool search-notes "query" --hybrid
+```
+
+### Output
+
+```json
+{
+  "query": "python async",
+  "results": [
+    {
+      "title": "Async Programming",
+      "permalink": "async-programming",
+      "path": "notes/async-programming.md",
+      "snippet": "...Python async programming with asyncio...",
+      "score": 0.95
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 10
+}
+```
+
+## bm tool build-context
+
+Get context needed to continue a discussion.
+
+```bash
+bm tool build-context URL [OPTIONS]
+```
+
+### Arguments
+
+- `URL` - memory:// URL or note path
+
+### Options
+
+- `--depth INTEGER` - Depth of context to build (default: 1)
+- `--timeframe TEXT` - Timeframe filter (e.g., '7d', '1 week') (default: 7d)
+- `--page INTEGER` - Page number (default: 1)
+- `--page-size INTEGER` - Results per page (default: 10)
+- `--max-related INTEGER` - Maximum related items (default: 10)
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Build context
+bm tool build-context memory://specs/search
+
+# Build with depth
+bm tool build-context specs/search --depth 2
+
+# Build with timeframe
+bm tool build-context specs/search --timeframe 30d
+
+# Build with limits
+bm tool build-context specs/search --max-related 5
+```
+
+### Output
+
+```json
+{
+  "url": "memory://specs/search",
+  "entity": {
+    "title": "Search Specification",
+    "content": "..."
+  },
+  "related": [
+    {
+      "title": "Search Implementation",
+      "relation": "implements"
+    }
+  ],
+  "recent_changes": [
+    {
+      "title": "Search Updates",
+      "updated": "2024-01-15T14:30:00Z"
+    }
+  ]
+}
+```
+
+## bm tool recent-activity
+
+Get recent activity across the knowledge base.
+
+```bash
+bm tool recent-activity [OPTIONS]
+```
+
+### Options
+
+- `--type TEXT` - Filter by item type (repeatable)
+- `--depth INTEGER` - Depth of context (default: 1)
+- `--timeframe TEXT` - Timeframe filter (default: 7d)
+- `--page INTEGER` - Page number (default: 1)
+- `--page-size INTEGER` - Results per page (default: 50)
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Recent activity
+bm tool recent-activity
+
+# Last 30 days
+bm tool recent-activity --timeframe 30d
+
+# Filter by type
+bm tool recent-activity --type entity --type observation
+
+# More results
+bm tool recent-activity --page-size 100
+```
+
+### Output
+
+```json
+{
+  "timeframe": "7d",
+  "items": [
+    {
+      "title": "Meeting Notes",
+      "type": "entity",
+      "updated": "2024-01-15T14:30:00Z",
+      "path": "notes/meeting-2024-01-15.md"
+    }
+  ],
+  "total": 1,
+  "page": 1
+}
+```
+
+## bm tool list-projects
+
+List all available projects.
+
+```bash
+bm tool list-projects [OPTIONS]
+```
+
+### Options
+
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# List projects
+bm tool list-projects
+
+# List local projects only
+bm tool list-projects --local
+```
+
+### Output
+
+```json
+{
+  "projects": [
+    {
+      "name": "research",
+      "path": "~/Documents/research",
+      "is_default": true
+    }
+  ]
+}
+```
+
+## bm tool list-workspaces
+
+List available cloud workspaces.
+
+```bash
+bm tool list-workspaces [OPTIONS]
+```
+
+### Options
+
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# List workspaces
+bm tool list-workspaces
+
+# Force cloud routing
+bm tool list-workspaces --cloud
+```
+
+### Output
+
+```json
+{
+  "workspaces": [
+    {
+      "name": "Personal",
+      "tenant_id": "11111111-2222-3333-4444-555555555555",
+      "workspace_type": "personal"
+    }
+  ]
+}
+```
+
+## Schema Commands
+
+### bm tool schema-validate
+
+Validate notes against their schemas.
+
+```bash
+bm tool schema-validate [TARGET] [OPTIONS]
+```
+
+### Arguments
+
+- `TARGET` - Note path or note type to validate (optional)
+
+### Options
+
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Validate all notes
+bm tool schema-validate
+
+# Validate by type
+bm tool schema-validate person
+
+# Validate specific note
+bm tool schema-validate people/ada-lovelace.md
+```
+
+### Output
+
+```json
+{
+  "valid": true,
+  "errors": [],
+  "notes_validated": 5
+}
+```
+
+### bm tool schema-infer
+
+Infer schema from existing notes of a type.
+
+```bash
+bm tool schema-infer NOTE_TYPE [OPTIONS]
+```
+
+### Arguments
+
+- `NOTE_TYPE` - Note type to analyze (e.g., person, meeting)
+
+### Options
+
+- `--threshold FLOAT` - Minimum frequency for optional fields 0-1 (default: 0.25)
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Infer schema
+bm tool schema-infer person
+
+# With threshold
+bm tool schema-infer meeting --threshold 0.5
+```
+
+### Output
+
+```json
+{
+  "note_type": "person",
+  "schema": {
+    "required": ["name"],
+    "optional": ["email", "role"]
+  },
+  "sample_count": 10
+}
+```
+
+### bm tool schema-diff
+
+Show drift between schema and actual usage.
+
+```bash
+bm tool schema-diff NOTE_TYPE [OPTIONS]
+```
+
+### Arguments
+
+- `NOTE_TYPE` - Note type to check for drift
+
+### Options
+
+- `--project TEXT` - Project to use (default: default project)
+- `--workspace TEXT` - Cloud workspace tenant ID or name
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+
+### Examples
+
+```bash
+# Check drift
+bm tool schema-diff person
+
+# Check in specific project
+bm tool schema-diff person --project research
+```
+
+### Output
+
+```json
+{
+  "note_type": "person",
+  "missing_fields": ["phone"],
+  "extra_fields": ["twitter"],
+  "notes_analyzed": 10
+}
+```
+
+## JSON Output
+
+All tool commands output JSON for easy parsing:
+
+```bash
+# Pipe to jq for filtering
+bm tool search-notes "query" | jq '.results[0].title'
+
+# Save to file
+bm tool list-projects > projects.json
+
+# Use in scripts
+TITLE=$(bm tool read-note my-note | jq -r '.title')
+echo "Note title: $TITLE"
+```
+
+## Routing Options
+
+Most tool commands support routing flags:
+
+- `--local` - Force local API routing
+- `--cloud` - Force cloud API routing
+- `--project TEXT` - Specify project
+- `--workspace TEXT` - Specify cloud workspace
+
+These allow flexible routing for multi-project and cloud setups.
+
+## Error Handling
+
+Errors are returned in JSON format:
+
+```json
+{
+  "error": "Note not found: invalid-note"
+}
+```
+
+Exit codes:
+
+- `0` - Success
+- `1` - Error occurred
+
+Check exit codes in scripts:
+
+```bash
+if bm tool read-note my-note; then
+  echo "Success"
+else
+  echo "Failed"
+fi
+```

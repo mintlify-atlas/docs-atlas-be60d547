@@ -1,0 +1,558 @@
+---
+title: 'Writing Effective Notes'
+description: 'Learn how to write notes that build a powerful knowledge graph'
+icon: 'pen-to-square'
+---
+
+## Overview
+
+Basic Memory uses a simple Markdown format that both humans and AI can read and write. The format is designed to be:
+
+- **Familiar** - Standard Markdown with minimal special syntax
+- **Structured** - Clear patterns for observations and relations
+- **Flexible** - Works with existing tools like Obsidian
+- **Traversable** - Builds a connected knowledge graph
+
+## Note Structure
+
+Every note has three parts:
+
+<Steps>
+  <Step title="Frontmatter">
+    YAML metadata that describes the note
+  </Step>
+  <Step title="Content (Observations)">
+    Categorized facts about the topic
+  </Step>
+  <Step title="Relations">
+    Links to other notes in your knowledge graph
+  </Step>
+</Steps>
+
+## Basic Note Example
+
+Here's a complete note showing all three parts:
+
+```markdown
+---
+title: Coffee Brewing Methods
+type: note
+tags: [coffee, brewing]
+permalink: coffee-brewing-methods
+---
+
+# Coffee Brewing Methods
+
+## Observations
+- [method] Pour over provides more flavor clarity than French press
+- [technique] Water temperature at 205°F extracts optimal compounds #brewing
+- [preference] Ethiopian beans work well with lighter roasts (personal experience)
+
+## Relations
+- relates_to [[Coffee Bean Origins]]
+- requires [[Proper Grinding Technique]]
+- contrasts_with [[Tea Brewing Methods]]
+```
+
+## Frontmatter
+
+Frontmatter is YAML metadata between `---` fences at the top of the file.
+
+### Required Fields
+
+<ParamField path="title" type="string">
+  The note title. Auto-generated from filename if omitted.
+</ParamField>
+
+### Optional Fields
+
+<ParamField path="type" type="string" default="note">
+  Entity type for classification (e.g., `note`, `person`, `project`, `meeting`)
+</ParamField>
+
+<ParamField path="tags" type="array">
+  List of tags for organization and filtering
+</ParamField>
+
+<ParamField path="permalink" type="string">
+  Stable identifier derived from title. Persists even if file moves.
+</ParamField>
+
+### Example Frontmatter
+
+<CodeGroup>
+```yaml Simple Note
+---
+title: Daily Standup
+type: meeting
+tags: [meetings, team]
+---
+```
+
+```yaml Person Note
+---
+title: Paul Graham
+type: person
+tags: [startups, essays, lisp]
+permalink: paul-graham
+---
+```
+
+```yaml Project Note
+---
+title: Basic Memory
+type: project
+tags: [development, knowledge-management]
+status: active
+---
+```
+</CodeGroup>
+
+### Custom Metadata
+
+You can add any custom fields to frontmatter:
+
+```yaml
+---
+title: API Design
+status: in-progress
+priority: high
+assignee: alice
+due_date: 2024-12-31
+---
+```
+
+Custom fields are:
+- Stored in the database
+- Searchable with `metadata_filters`
+- Available for filtering and queries
+
+## Observations
+
+Observations are categorized facts about the topic. They're the building blocks of your knowledge.
+
+### Format
+
+```markdown
+- [category] content #tag1 #tag2 (optional context)
+```
+
+<ParamField path="category" type="string" required>
+  Classification in square brackets. Any text except `[]()` characters.
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  The actual fact or information.
+</ParamField>
+
+<ParamField path="tags" type="string">
+  Optional inline tags starting with `#`
+</ParamField>
+
+<ParamField path="context" type="string">
+  Optional parenthesized supporting details or source
+</ParamField>
+
+### Common Categories
+
+<CardGroup cols={3}>
+  <Card title="fact" icon="circle-check">
+    Objective information
+  </Card>
+  <Card title="method" icon="code">
+    Techniques and approaches
+  </Card>
+  <Card title="tip" icon="lightbulb">
+    Helpful advice
+  </Card>
+  <Card title="preference" icon="heart">
+    Personal opinions
+  </Card>
+  <Card title="experiment" icon="flask">
+    Things you've tried
+  </Card>
+  <Card title="resource" icon="link">
+    External references
+  </Card>
+  <Card title="question" icon="circle-question">
+    Open questions
+  </Card>
+  <Card title="decision" icon="gavel">
+    Choices made
+  </Card>
+  <Card title="note" icon="note-sticky">
+    General observations
+  </Card>
+</CardGroup>
+
+### Observation Examples
+
+```markdown
+## Technical Observations
+- [tech] Uses SQLite for local storage #database
+- [design] Follows local-first architecture #architecture
+- [decision] Selected bcrypt for password hashing #security (based on OWASP audit)
+- [performance] Query time under 50ms for 10k documents
+
+## Learning Observations
+- [insight] Async patterns reduce code complexity
+- [tip] Use context managers for resource cleanup
+- [question] Should we add Redis caching?
+- [experiment] Tried connection pooling - 2x speedup
+
+## Meeting Observations
+- [attendees] Alice, Bob, Carol
+- [decision] Ship MVP by end of Q1
+- [action_item] Bob to review PR #42
+- [blocker] Waiting on API credentials
+
+## Person Observations
+- [name] Paul Graham
+- [role] Essayist and investor
+- [expertise] Startups
+- [expertise] Lisp
+- [expertise] Essay writing
+```
+
+<Tip>
+  Use repeated categories (like multiple `[expertise]` items) to represent array-like fields.
+</Tip>
+
+## Relations
+
+Relations connect notes to form your knowledge graph. They're directional links that show how concepts relate.
+
+### Format
+
+```markdown
+- relation_type [[Target Entity]] (optional context)
+```
+
+<ParamField path="relation_type" type="string">
+  Type of relationship. Defaults to `relates_to` if omitted.
+</ParamField>
+
+<ParamField path="target" type="string" required>
+  Wiki link to target note (by title or permalink)
+</ParamField>
+
+<ParamField path="context" type="string">
+  Optional parenthesized details
+</ParamField>
+
+### Common Relation Types
+
+<Tabs>
+  <Tab title="Technical">
+    ```markdown
+    - implements [[Search Design]]
+    - depends_on [[Database Schema]]
+    - extends [[Base Class]]
+    - part_of [[Core Module]]
+    - contains [[Utility Functions]]
+    - uses [[External API]]
+    ```
+  </Tab>
+  
+  <Tab title="Knowledge">
+    ```markdown
+    - relates_to [[Related Topic]]
+    - inspired_by [[Inspiration Source]]
+    - contrasts_with [[Alternative Approach]]
+    - builds_on [[Foundation Concept]]
+    - contradicts [[Previous Belief]]
+    - explains [[Complex Topic]]
+    ```
+  </Tab>
+  
+  <Tab title="People & Organizations">
+    ```markdown
+    - works_at [[Company Name]]
+    - authored [[Book Title]]
+    - collaborated_with [[Team Member]]
+    - reports_to [[Manager]]
+    - mentored_by [[Mentor Name]]
+    - founded [[Startup Name]]
+    ```
+  </Tab>
+  
+  <Tab title="Tasks & Projects">
+    ```markdown
+    - blocks [[Other Task]]
+    - blocked_by [[Dependency]]
+    - assigned_to [[Team Member]]
+    - part_of [[Epic]]
+    - follows [[Previous Task]]
+    - related_to [[Project]]
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  You can use any text as a relation type - these are conventions, not a fixed set.
+</Note>
+
+### Inline References
+
+Wiki links in regular prose automatically create `links_to` relations:
+
+```markdown
+This approach builds on [[Core Design Principles]] and uses
+[[Utility Functions]] for data processing.
+```
+
+Creates:
+- `links_to [[Core Design Principles]]`
+- `links_to [[Utility Functions]]`
+
+### Forward References
+
+You can link to notes that don't exist yet:
+
+```markdown
+- requires [[New Feature]] (to be implemented)
+- relates_to [[Future Research Area]]
+```
+
+Basic Memory resolves these when the target notes are created.
+
+## Complete Examples
+
+### Technical Documentation
+
+```markdown
+---
+title: Authentication System
+type: technical
+tags: [auth, security, api]
+status: active
+---
+
+# Authentication System
+
+## Observations
+- [tech] JWT-based authentication with refresh tokens
+- [design] Tokens expire after 24 hours for security
+- [decision] Using bcrypt with cost factor 12 (OWASP recommendation)
+- [performance] Auth middleware adds ~5ms overhead
+- [security] Implemented rate limiting on login endpoints
+
+## Relations
+- implements [[Security Architecture]]
+- depends_on [[User Database Schema]]
+- uses [[Cryptography Library]]
+- documented_in [[API Reference]]
+```
+
+### Meeting Notes
+
+```markdown
+---
+title: Sprint Planning - 2024-01-15
+type: meeting
+tags: [planning, team, sprint]
+date: 2024-01-15
+---
+
+# Sprint Planning - 2024-01-15
+
+## Observations
+- [attendees] Alice, Bob, Carol, David
+- [decision] Focus on authentication features this sprint
+- [decision] Target 40 story points
+- [action_item] Alice to review database schema
+- [action_item] Bob to implement JWT validation
+- [blocker] Waiting on security audit results
+- [note] Next planning session: 2024-01-29
+
+## Relations
+- part_of [[Q1 2024 Roadmap]]
+- related_to [[Authentication System]]
+- follows [[Previous Sprint Retro]]
+```
+
+### Research Notes
+
+```markdown
+---
+title: Semantic Search Implementation
+type: research
+tags: [search, ml, embeddings]
+status: in-progress
+---
+
+# Semantic Search Implementation
+
+## Observations
+- [approach] Using sentence transformers for embeddings
+- [performance] ~100ms per query with 10k documents
+- [experiment] Tried FAISS index - 3x faster than cosine similarity
+- [limitation] Embeddings require 384 dimensions per document
+- [tradeoff] Accuracy vs speed - hybrid approach seems best
+- [resource] Sentence Transformers documentation
+
+## Relations
+- implements [[Search Strategy]]
+- improves [[Existing FTS Search]]
+- requires [[Vector Database]]
+- inspired_by [[Semantic Kernel Design]]
+- relates_to [[Knowledge Graph Traversal]]
+```
+
+### Person Profile
+
+```markdown
+---
+title: Paul Graham
+type: person
+tags: [startups, essays, programming]
+---
+
+# Paul Graham
+
+## Observations
+- [name] Paul Graham
+- [role] Essayist and investor
+- [expertise] Startup advice
+- [expertise] Lisp programming
+- [expertise] Essay writing
+- [background] Created Viaweb, first web application
+- [influence] Changed how people think about startups
+
+## Relations
+- founded [[Y Combinator]]
+- authored [[Hackers and Painters]]
+- authored [[On Lisp]]
+- inspired [[Startup Culture]]
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose meaningful categories">
+    Use categories that help you find and understand information:
+    
+    **Good:**
+    ```markdown
+    - [decision] Use PostgreSQL for production
+    - [rationale] Better concurrent write performance
+    - [tradeoff] More complex setup than SQLite
+    ```
+    
+    **Avoid:**
+    ```markdown
+    - [note] Database choice
+    - [note] Performance matters
+    - [note] Setup complexity
+    ```
+  </Accordion>
+  
+  <Accordion title="Make relations meaningful">
+    Choose relation types that explain the connection:
+    
+    **Good:**
+    ```markdown
+    - implements [[API Design]]
+    - depends_on [[Authentication]]
+    - improves [[Old Implementation]]
+    ```
+    
+    **Avoid:**
+    ```markdown
+    - relates_to [[API Design]]
+    - relates_to [[Authentication]]
+    - relates_to [[Old Implementation]]
+    ```
+  </Accordion>
+  
+  <Accordion title="Add context when helpful">
+    Use the context field to add supporting details:
+    
+    ```markdown
+    - [decision] Use Redis for caching (after load testing showed 5x improvement)
+    - [experiment] Tried connection pooling (reduced latency from 100ms to 45ms)
+    - works_at [[Acme Corp]] (Senior Engineer, 2020-present)
+    ```
+  </Accordion>
+  
+  <Accordion title="Be consistent within domains">
+    Use consistent categories and relation types within a domain:
+    
+    **Meeting notes:**
+    ```markdown
+    - [attendees] Alice, Bob
+    - [decision] Ship by Friday
+    - [action_item] Review PR #42
+    ```
+    
+    **Technical notes:**
+    ```markdown
+    - [tech] Uses REST API
+    - [design] Stateless architecture
+    - [performance] Sub-100ms response time
+    ```
+  </Accordion>
+  
+  <Accordion title="Don't over-structure">
+    Not every note needs elaborate structure. Simple notes are fine:
+    
+    ```markdown
+    ---
+    title: Quick Idea
+    ---
+    
+    # Quick Idea
+    
+    What if we added dark mode to the UI? Users have been asking for it.
+    
+    - relates_to [[UI Improvements]]
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Using AI to Create Notes
+
+When working with Claude or other AI assistants, you can ask them to create structured notes:
+
+### Natural Language Prompts
+
+```
+"Create a note about today's architecture meeting. Include attendees,
+key decisions, and action items. Link it to the Authentication System note."
+
+"Document the new caching strategy we discussed, including the
+performance tradeoffs and why we chose Redis."
+
+"Write a note summarizing what I've learned about semantic search,
+including the experiments I ran and their results."
+```
+
+### Asking for Specific Formats
+
+```
+"Create a person note for Jane Smith with her role, expertise areas,
+and connections to relevant projects."
+
+"Document this as a technical decision with observations about the
+approach, rationale, and tradeoffs. Link it to related architecture notes."
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Searching Notes" icon="magnifying-glass" href="/guides/searching">
+    Learn how to find information in your knowledge base
+  </Card>
+  
+  <Card title="Managing Projects" icon="folder" href="/guides/projects">
+    Organize notes across multiple projects
+  </Card>
+  
+  <Card title="Creating Visualizations" icon="diagram-project" href="/guides/visualization">
+    Build visual knowledge maps
+  </Card>
+  
+  <Card title="Note Format Reference" icon="book" href="/concepts/markdown-format">
+    Complete technical specification
+  </Card>
+</CardGroup>

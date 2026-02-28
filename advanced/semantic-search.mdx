@@ -1,0 +1,388 @@
+---
+title: Semantic Search
+description: Configure vector embeddings for semantic search in Basic Memory
+---
+
+Semantic search allows you to find notes by meaning, not just keywords. It uses vector embeddings to understand the semantic similarity between your query and your notes.
+
+<Info>
+Semantic search is **optional** and disabled by default. It requires additional dependencies and resources.
+</Info>
+
+## How It Works
+
+<Steps>
+  <Step title="Text Embedding">
+    Text is converted to high-dimensional vectors using a language model
+  </Step>
+  <Step title="Vector Storage">
+    Embeddings are stored in the database with vector indexes
+  </Step>
+  <Step title="Similarity Search">
+    Queries are embedded and compared using cosine similarity
+  </Step>
+  <Step title="Result Ranking">
+    Results ranked by semantic similarity score
+  </Step>
+</Steps>
+
+## Configuration
+
+Enable semantic search in your config:
+
+```yaml
+# ~/.config/basic-memory/config.yaml
+semantic_search_enabled: true
+semantic_embedding_provider: fastembed
+semantic_embedding_model: BAAI/bge-small-en-v1.5
+semantic_embedding_dimensions: 384
+semantic_embedding_batch_size: 32
+```
+
+Or via environment variables:
+
+```bash
+export BASIC_MEMORY_SEMANTIC_SEARCH_ENABLED=true
+export BASIC_MEMORY_SEMANTIC_EMBEDDING_PROVIDER=fastembed
+export BASIC_MEMORY_SEMANTIC_EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+```
+
+## Embedding Providers
+
+### FastEmbed (Default)
+
+FastEmbed provides local embedding models via ONNX runtime.
+
+**Advantages**:
+- Runs locally (no API calls)
+- Fast inference
+- Low memory footprint
+- No API costs
+
+**Available models**:
+
+| Model | Dimensions | Description |
+|-------|-----------|-------------|
+| `BAAI/bge-small-en-v1.5` | 384 | **Default** - Balanced speed and quality |
+| `BAAI/bge-base-en-v1.5` | 768 | Higher quality, slower |
+| `sentence-transformers/all-MiniLM-L6-v2` | 384 | Fast, good for short texts |
+
+```yaml
+semantic_embedding_provider: fastembed
+semantic_embedding_model: BAAI/bge-small-en-v1.5
+semantic_embedding_dimensions: 384
+```
+
+### OpenAI
+
+Use OpenAI's embedding API for higher quality embeddings.
+
+**Advantages**:
+- State-of-the-art quality
+- No local compute required
+- Latest models
+
+**Disadvantages**:
+- Requires API key and internet
+- Per-token costs
+- Data sent to OpenAI
+
+```yaml
+semantic_embedding_provider: openai
+semantic_embedding_model: text-embedding-3-small
+semantic_embedding_dimensions: 1536
+```
+
+**Environment variable**:
+
+```bash
+export OPENAI_API_KEY=sk-...
+```
+
+**Available models**:
+
+| Model | Dimensions | Cost (per 1M tokens) |
+|-------|-----------|---------------------|
+| `text-embedding-3-small` | 1536 | $0.02 |
+| `text-embedding-3-large` | 3072 | $0.13 |
+| `text-embedding-ada-002` | 1536 | $0.10 (legacy) |
+
+## Database Setup
+
+### SQLite (sqlite-vec)
+
+SQLite uses the `sqlite-vec` extension for vector storage:
+
+```python
+# Automatically installed with semantic dependencies
+import sqlite_vec
+
+# Vector table created automatically
+CREATE VIRTUAL TABLE vec_items USING vec0(
+    embedding float[384]
+);
+```
+
+**Performance**: Good for small to medium datasets (< 100k vectors)
+
+### PostgreSQL (pgvector)
+
+PostgreSQL uses the `pgvector` extension:
+
+```bash
+# Install pgvector extension
+psql -d basic_memory -c "CREATE EXTENSION vector;"
+```
+
+```sql
+-- Vector column and index created automatically
+ALTER TABLE entity ADD COLUMN embedding vector(384);
+CREATE INDEX ON entity USING ivfflat (embedding vector_cosine_ops);
+```
+
+**Performance**: Excellent for large datasets with HNSW/IVFFlat indexes
+
+## Usage
+
+### MCP Tool
+
+```python
+# Semantic search via MCP
+await search_notes(
+    query="knowledge management systems",
+    search_type="semantic",
+    page_size=10
+)
+```
+
+### CLI
+
+```bash
+# Semantic search via CLI
+bm tool search-notes \
+  --query "knowledge management systems" \
+  --search-type semantic \
+  --page-size 10
+```
+
+### Hybrid Search
+
+Combine full-text and semantic search:
+
+```python
+# Hybrid search (best of both)
+await search_notes(
+    query="knowledge management",
+    search_type="hybrid",
+    page_size=10
+)
+```
+
+**How it works**:
+
+1. Run full-text search (keyword matching)
+2. Run semantic search (meaning-based)
+3. Merge and re-rank results using Reciprocal Rank Fusion (RRF)
+
+## Performance Considerations
+
+### Embedding Generation
+
+<Tabs>
+  <Tab title="FastEmbed (Local)">
+    **Speed**: ~100-500 docs/sec (depending on hardware)
+    
+    **Memory**: ~200-500 MB for model
+    
+    **Batch processing**: Enabled by default (`batch_size=32`)
+  </Tab>
+  <Tab title="OpenAI API">
+    **Speed**: Limited by API rate limits
+    
+    **Rate limits**: 3,000 requests/min (tier 1)
+    
+    **Batch processing**: Up to 2048 inputs per request
+  </Tab>
+</Tabs>
+
+### Vector Search Performance
+
+<Info>
+Vector search is slower than full-text search. Use hybrid search to get the best of both.
+</Info>
+
+| Database | Backend | Search Time (10k docs) |
+|----------|---------|------------------------|
+| SQLite | sqlite-vec | ~20-50ms |
+| PostgreSQL | pgvector (IVFFlat) | ~10-30ms |
+| PostgreSQL | pgvector (HNSW) | ~5-15ms |
+
+### Optimization Tips
+
+<AccordionGroup>
+  <Accordion title="Use smaller embedding models">
+    Smaller dimensions = faster search:
+    - 384 dimensions: Faster, good for most use cases
+    - 768 dimensions: Balanced
+    - 1536+ dimensions: Higher quality, slower
+  </Accordion>
+  
+  <Accordion title="Batch embedding generation">
+    ```yaml
+    semantic_embedding_batch_size: 64  # Increase for faster processing
+    ```
+    
+    Trade-off: Higher memory usage
+  </Accordion>
+  
+  <Accordion title="Use PostgreSQL for large datasets">
+    PostgreSQL with pgvector is much faster for > 10k documents
+  </Accordion>
+  
+  <Accordion title="Enable HNSW index (PostgreSQL)">
+    ```sql
+    CREATE INDEX ON entity USING hnsw (embedding vector_cosine_ops);
+    ```
+    
+    Faster search, longer index build time
+  </Accordion>
+</AccordionGroup>
+
+## Reindexing
+
+Regenerate embeddings after changing models:
+
+```bash
+# Full reindex (slow)
+bm tool reindex --force
+
+# Reindex specific project
+bm tool reindex --project my-project
+```
+
+<Warning>
+Reindexing can take several minutes for large knowledge bases. Embeddings are generated for all notes.
+</Warning>
+
+## Search Quality
+
+### When to Use Semantic Search
+
+✅ **Good for**:
+- Finding conceptually similar notes
+- Queries with synonyms or paraphrasing
+- Discovering related topics
+- Cross-lingual search (with multilingual models)
+
+❌ **Not ideal for**:
+- Exact keyword matching
+- Searching for specific names or IDs
+- Boolean logic (AND, OR, NOT)
+- Very short queries (< 3 words)
+
+### Example Comparisons
+
+<Tabs>
+  <Tab title="Full-Text Search">
+    **Query**: `python logging`
+    
+    **Finds**: Documents containing "python" AND "logging"
+    
+    **Misses**: Documents about "debugging in Python" or "error handling"
+  </Tab>
+  <Tab title="Semantic Search">
+    **Query**: `python logging`
+    
+    **Finds**: 
+    - Documents about Python logging
+    - Documents about debugging
+    - Documents about error handling
+    - Documents about observability in Python
+    
+    **May include false positives**: Documents about logging in general
+  </Tab>
+  <Tab title="Hybrid Search">
+    **Query**: `python logging`
+    
+    **Finds**: Best of both approaches
+    
+    **Ranking**: Keyword matches ranked higher, semantic matches for context
+  </Tab>
+</Tabs>
+
+## Multilingual Search
+
+Use multilingual models for cross-language search:
+
+```yaml
+semantic_embedding_model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+semantic_embedding_dimensions: 384
+```
+
+**Supported languages**: 50+ including English, Spanish, French, German, Chinese, Japanese
+
+**Example**: Query in English, find results in Spanish
+
+## Privacy Considerations
+
+<Warning>
+**FastEmbed (Local)**: All processing happens locally. No data leaves your machine.
+
+**OpenAI API**: Text is sent to OpenAI for embedding generation. Review OpenAI's [data usage policy](https://openai.com/policies/usage-policies).
+</Warning>
+
+For maximum privacy, use FastEmbed with local models.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ModuleNotFoundError: No module named 'fastembed'">
+    **Solution**: Install semantic dependencies:
+    ```bash
+    uv pip install basic-memory[semantic]
+    ```
+  </Accordion>
+  
+  <Accordion title="PostgreSQL: extension 'vector' not found">
+    **Solution**: Install pgvector:
+    ```bash
+    # macOS
+    brew install pgvector
+    
+    # Ubuntu/Debian
+    sudo apt-get install postgresql-16-pgvector
+    
+    # Enable in database
+    psql -d basic_memory -c "CREATE EXTENSION vector;"
+    ```
+  </Accordion>
+  
+  <Accordion title="Semantic search returns no results">
+    **Causes**:
+    1. Embeddings not generated yet
+    2. Model mismatch (changed model without reindexing)
+    
+    **Solution**: Reindex
+    ```bash
+    bm tool reindex --force
+    ```
+  </Accordion>
+  
+  <Accordion title="OpenAI API key not found">
+    **Solution**: Set environment variable:
+    ```bash
+    export OPENAI_API_KEY=sk-...
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Search Guide" icon="magnifying-glass" href="/guides/searching">
+    Learn advanced search techniques
+  </Card>
+  <Card title="Database Backends" icon="database" href="/advanced/database-backends">
+    Configure SQLite or PostgreSQL
+  </Card>
+</CardGroup>

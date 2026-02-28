@@ -1,0 +1,474 @@
+---
+title: Search API
+description: Full-text and semantic search endpoints for your knowledge graph
+---
+
+The Search API provides powerful full-text and semantic search capabilities across your entire knowledge graph, including entities, observations, and relations.
+
+## Search Entities
+
+Search across all content in a project with advanced filtering options.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/{project_id}/search/ \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "python AND flask",
+    "retrieval_mode": "fts",
+    "note_types": ["note", "spec"],
+    "after_date": "2026-01-01T00:00:00Z"
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/search/",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "text": "python AND flask",
+            "retrieval_mode": "fts",
+            "note_types": ["note", "spec"],
+            "after_date": "2026-01-01T00:00:00Z"
+        },
+        params={"page": 1, "page_size": 20}
+    )
+    results = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="project_id" type="string" required>
+  Project external UUID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination (1-indexed)
+</ParamField>
+
+<ParamField query="page_size" type="integer" default="10">
+  Number of results per page (max 100)
+</ParamField>
+
+### Request Body
+
+#### Primary Search Modes (use ONE)
+
+<ParamField body="text" type="string">
+  Full-text search query. Supports boolean operators:
+  - `python AND flask` - Both terms required
+  - `python OR django` - Either term matches
+  - `python NOT django` - First term but not second
+  - `(python OR flask) AND web` - Grouping with parentheses
+</ParamField>
+
+<ParamField body="title" type="string">
+  Search entity titles only
+</ParamField>
+
+<ParamField body="permalink" type="string">
+  Exact permalink match
+</ParamField>
+
+<ParamField body="permalink_match" type="string">
+  Glob-style permalink pattern (e.g., `docs/*`, `specs/search*`)
+</ParamField>
+
+#### Search Filters (optional)
+
+<ParamField body="note_types" type="array">
+  Filter by note types (e.g., `["note", "person", "spec"]`)
+</ParamField>
+
+<ParamField body="entity_types" type="array">
+  Filter by entity types: `entity`, `observation`, or `relation`
+</ParamField>
+
+<ParamField body="after_date" type="string">
+  Only return items updated after this date (ISO 8601 format)
+</ParamField>
+
+<ParamField body="metadata_filters" type="object">
+  Structured frontmatter filters (e.g., `{"status": "active", "priority": "high"}`)
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Filter by frontmatter tags (e.g., `["python", "web"]`)
+</ParamField>
+
+<ParamField body="status" type="string">
+  Filter by frontmatter status field
+</ParamField>
+
+<ParamField body="retrieval_mode" type="string" default="fts">
+  Search strategy:
+  - `fts` - Full-text search (fast, keyword-based)
+  - `vector` - Semantic search (meaning-based, requires embeddings)
+  - `hybrid` - Combines FTS and vector search
+</ParamField>
+
+<ParamField body="min_similarity" type="number">
+  Minimum similarity score for semantic search (0.0 to 1.0)
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of search results
+  
+  <Expandable title="Search Result Object">
+    <ResponseField name="title" type="string">
+      Entity or observation title
+    </ResponseField>
+    
+    <ResponseField name="type" type="string">
+      Result type: `entity`, `observation`, or `relation`
+    </ResponseField>
+    
+    <ResponseField name="score" type="number">
+      Relevance score (higher is better)
+    </ResponseField>
+    
+    <ResponseField name="permalink" type="string">
+      Entity permalink
+    </ResponseField>
+    
+    <ResponseField name="file_path" type="string">
+      File path relative to project root
+    </ResponseField>
+    
+    <ResponseField name="content" type="string">
+      Full content or matched excerpt
+    </ResponseField>
+    
+    <ResponseField name="matched_chunk" type="string">
+      Highlighted excerpt showing match context
+    </ResponseField>
+    
+    <ResponseField name="entity_id" type="integer">
+      Internal entity ID
+    </ResponseField>
+    
+    <ResponseField name="metadata" type="object">
+      Frontmatter metadata
+    </ResponseField>
+    
+    <ResponseField name="category" type="string">
+      For observations: the observation category
+    </ResponseField>
+    
+    <ResponseField name="from_entity" type="string">
+      For relations: source entity permalink
+    </ResponseField>
+    
+    <ResponseField name="to_entity" type="string">
+      For relations: target entity permalink
+    </ResponseField>
+    
+    <ResponseField name="relation_type" type="string">
+      For relations: the relation type
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="current_page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="page_size" type="integer">
+  Results per page
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean">
+  True if more results are available
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "results": [
+    {
+      "title": "Flask Web Framework",
+      "type": "entity",
+      "score": 0.95,
+      "permalink": "frameworks/flask",
+      "file_path": "frameworks/flask.md",
+      "content": "# Flask Web Framework\n\nFlask is a lightweight Python web framework...",
+      "matched_chunk": "Flask is a lightweight Python web framework that provides...",
+      "entity_id": 123,
+      "metadata": {
+        "type": "spec",
+        "tags": ["python", "web", "framework"],
+        "status": "active"
+      }
+    },
+    {
+      "title": "Python Best Practices",
+      "type": "entity",
+      "score": 0.82,
+      "permalink": "guides/python-best-practices",
+      "file_path": "guides/python-best-practices.md",
+      "content": "# Python Best Practices\n\nWhen building web applications with Flask...",
+      "matched_chunk": "...building web applications with Flask or Django...",
+      "entity_id": 456,
+      "metadata": {
+        "type": "note",
+        "tags": ["python", "best-practices"]
+      }
+    }
+  ],
+  "current_page": 1,
+  "page_size": 10,
+  "has_more": false
+}
+```
+
+## Reindex Project
+
+Rebuilds the search index from scratch for a project. This is a background operation.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/{project_id}/search/reindex \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/search/reindex",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="status" type="string">
+  Always "ok"
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Status message: "Reindex initiated"
+</ResponseField>
+
+### When to Reindex
+
+Reindexing is typically needed after:
+- Bulk imports or migrations
+- Database corruption or inconsistencies
+- Upgrading Basic Memory versions
+- Changing search configuration
+
+<Note>
+  Reindexing happens in the background and doesn't block API requests. Search will continue using the old index until reindexing completes.
+</Note>
+
+## Search Strategies
+
+### Full-Text Search (FTS)
+
+Keyword-based search using SQLite FTS5:
+
+```json
+{
+  "text": "python web framework",
+  "retrieval_mode": "fts"
+}
+```
+
+**Pros:**
+- Fast performance
+- No additional setup required
+- Exact keyword matching
+
+**Cons:**
+- Misses semantic matches
+- Requires exact word forms
+
+### Semantic Search (Vector)
+
+Meaning-based search using embeddings:
+
+```json
+{
+  "text": "building web applications",
+  "retrieval_mode": "vector",
+  "min_similarity": 0.7
+}
+```
+
+**Pros:**
+- Finds conceptually similar content
+- Understands synonyms and context
+- Better for natural language queries
+
+**Cons:**
+- Requires embedding generation (slower initial setup)
+- Higher computational cost
+- Requires `semantic_search_enabled` in config
+
+<Note>
+  Semantic search requires embeddings to be generated. Enable with:
+  
+  ```bash
+  basic-memory config set semantic_search_enabled true
+  ```
+</Note>
+
+### Hybrid Search
+
+Combines FTS and vector search for best results:
+
+```json
+{
+  "text": "web development frameworks",
+  "retrieval_mode": "hybrid"
+}
+```
+
+**Pros:**
+- Balances speed and semantic understanding
+- Catches both exact and conceptual matches
+- Best overall accuracy
+
+**Cons:**
+- Requires embeddings like vector search
+- Slightly slower than pure FTS
+
+## Boolean Search Examples
+
+### AND Operator
+
+Find documents with ALL terms:
+
+```json
+{
+  "text": "python AND flask AND tutorial"
+}
+```
+
+### OR Operator
+
+Find documents with ANY term:
+
+```json
+{
+  "text": "flask OR django OR fastapi"
+}
+```
+
+### NOT Operator
+
+Exclude documents with specific terms:
+
+```json
+{
+  "text": "python NOT django"
+}
+```
+
+### Complex Queries
+
+Combine operators with parentheses:
+
+```json
+{
+  "text": "(python OR javascript) AND (web OR mobile) NOT deprecated"
+}
+```
+
+## Filtering Examples
+
+### By Date Range
+
+```json
+{
+  "text": "deployment",
+  "after_date": "2026-02-01T00:00:00Z"
+}
+```
+
+### By Note Types
+
+```json
+{
+  "text": "architecture",
+  "note_types": ["spec", "design"]
+}
+```
+
+### By Tags
+
+```json
+{
+  "text": "performance",
+  "tags": ["optimization", "production"]
+}
+```
+
+### By Metadata
+
+```json
+{
+  "text": "api",
+  "metadata_filters": {
+    "status": "active",
+    "priority": "high",
+    "team": "backend"
+  }
+}
+```
+
+### Combined Filters
+
+```json
+{
+  "text": "authentication",
+  "note_types": ["spec", "note"],
+  "tags": ["security"],
+  "after_date": "2026-01-01T00:00:00Z",
+  "metadata_filters": {
+    "status": "active"
+  }
+}
+```
+
+## Error Responses
+
+### 400 Bad Request
+
+**Semantic search disabled:**
+
+```json
+{
+  "detail": "Semantic search is disabled. Enable with semantic_search_enabled config."
+}
+```
+
+**Missing dependencies:**
+
+```json
+{
+  "detail": "Semantic search dependencies not installed. Run: pip install basic-memory[semantic]"
+}
+```
+
+**Invalid query:**
+
+```json
+{
+  "detail": "No search criteria provided"
+}
+```

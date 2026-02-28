@@ -1,0 +1,237 @@
+---
+title: CLI Overview
+description: Command-line interface for Basic Memory
+---
+
+Basic Memory provides a comprehensive command-line interface (CLI) for managing your local-first knowledge base. The CLI is available through two commands:
+
+- `basic-memory` - Full command name
+- `bm` - Short alias for faster typing
+
+Both commands provide identical functionality. Throughout this documentation, we'll use `bm` for brevity.
+
+## Installation
+
+Basic Memory requires Python 3.12 or later:
+
+```bash
+pip install basic-memory
+```
+
+## Basic Usage
+
+```bash
+# Check version
+bm --version
+bm -v
+
+# Get help
+bm --help
+bm <command> --help
+```
+
+## Command Categories
+
+The CLI is organized into several command groups:
+
+### Project Management
+
+Manage multiple Basic Memory projects:
+
+```bash
+bm project list              # List all projects
+bm project add <name> <path> # Add a new project
+bm project info <name>       # Show project statistics
+bm project default <name>    # Set default project
+```
+
+See [Project Commands](/api/cli/project-commands) for full reference.
+
+### Cloud Operations
+
+Authenticate and sync with Basic Memory Cloud (requires subscription):
+
+```bash
+bm cloud login              # OAuth authentication
+bm cloud status             # Check cloud connection
+bm cloud setup              # Configure cloud sync
+bm cloud snapshot create    # Create backup snapshots
+```
+
+See [Cloud Commands](/api/cli/cloud-commands) for full reference.
+
+### MCP Tools
+
+Access Model Context Protocol tools directly from the CLI:
+
+```bash
+bm tool write-note          # Create/update notes
+bm tool read-note           # Read note content
+bm tool search-notes        # Search knowledge base
+bm tool build-context       # Build conversation context
+```
+
+See [Tool Commands](/api/cli/tool-commands) for full reference.
+
+### Import Data
+
+Import data from external sources:
+
+```bash
+bm import claude conversations    # Import from Claude.ai
+bm import chatgpt                 # Import from ChatGPT
+bm import memory-json             # Import from JSON format
+```
+
+See [Import Commands](/api/cli/import-commands) for full reference.
+
+## Routing Modes
+
+Basic Memory supports both local and cloud routing:
+
+### Local Mode (Default)
+
+Commands run against your local database:
+
+```bash
+bm project list
+```
+
+### Cloud Mode
+
+Route commands to Basic Memory Cloud:
+
+```bash
+# Force cloud routing for a single command
+bm project list --cloud
+
+# Force local routing when cloud mode is enabled
+bm project list --local
+```
+
+### Per-Project Cloud Routing
+
+Individual projects can be configured to route through cloud:
+
+```bash
+# Set project to cloud mode
+bm project set-cloud research
+
+# Set project back to local mode
+bm project set-local research
+```
+
+## Output Formats
+
+Many commands support JSON output for scripting:
+
+```bash
+bm project list --json
+bm project info research --json
+bm tool search-notes "query" | jq '.results[0].title'
+```
+
+## Common Workflows
+
+### Initial Setup
+
+```bash
+# Check installation
+bm --version
+
+# View default project status
+bm status
+
+# List all projects
+bm project list
+```
+
+### Working with Projects
+
+```bash
+# Add a new local project
+bm project add research ~/Documents/research
+
+# Set as default
+bm project default research
+
+# View project statistics
+bm project info research
+```
+
+### Cloud Synchronization
+
+```bash
+# Authenticate with cloud
+bm cloud login
+
+# Set up cloud sync
+bm cloud setup
+
+# Add project with cloud mode
+bm project add notes --cloud --local-path ~/Documents/notes
+
+# Initial sync (with preview)
+bm project bisync --name notes --resync --dry-run
+bm project bisync --name notes --resync
+
+# Subsequent syncs
+bm project bisync --name notes
+```
+
+### Searching and Reading
+
+```bash
+# Full-text search
+bm tool search-notes "python async"
+
+# Search with filters
+bm tool search-notes --tag python --after_date 7d
+
+# Read a note
+bm tool read-note specs/search
+
+# View recent activity
+bm tool recent-activity --timeframe 7d
+```
+
+## Exit Codes
+
+The CLI uses standard exit codes:
+
+- `0` - Success
+- `1` - Error (invalid arguments, command failed, etc.)
+
+## Logging
+
+CLI operations are logged to:
+
+```
+~/.basic-memory/logs/basic-memory.log
+```
+
+The CLI suppresses stdout logging to keep output clean. Use the log file for troubleshooting.
+
+## Environment Variables
+
+- `BASIC_MEMORY_FORCE_LOCAL=true` - Force all commands to use local routing
+- `BASIC_MEMORY_TEST_POSTGRES=1` - Use Postgres backend for testing
+
+## Getting Help
+
+Every command and subcommand supports `--help`:
+
+```bash
+bm --help
+bm project --help
+bm project add --help
+bm cloud --help
+bm tool --help
+```
+
+## Next Steps
+
+- [Project Commands](/api/cli/project-commands) - Manage multiple projects
+- [Cloud Commands](/api/cli/cloud-commands) - Cloud sync and authentication
+- [Tool Commands](/api/cli/tool-commands) - MCP tools via CLI
+- [Import Commands](/api/cli/import-commands) - Import external data

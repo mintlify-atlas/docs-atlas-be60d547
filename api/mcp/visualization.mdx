@@ -1,0 +1,428 @@
+---
+title: "Visualization Tools"
+description: "MCP tools for creating visual representations of knowledge"
+---
+
+## canvas
+
+Create an Obsidian canvas file to visualize concepts and connections.
+
+```python
+async def canvas(
+    nodes: List[Dict[str, Any]],
+    edges: List[Dict[str, Any]],
+    title: str,
+    directory: str,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    context: Context | None = None,
+) -> str
+```
+
+### Parameters
+
+<ParamField path="nodes" type="list[dict]" required>
+  List of node objects following JSON Canvas 1.0 spec. Each node must have:
+  - `id` (string) - Unique identifier
+  - `type` (string) - Node type: "file", "text", "link", or "group"
+  - `x` (number) - X coordinate in pixels
+  - `y` (number) - Y coordinate in pixels
+  - `width` (number) - Width in pixels
+  - `height` (number) - Height in pixels
+  
+  Additional properties by type:
+  - **file nodes**: `file` (string) - Path to file (e.g., "docs/Document.md")
+  - **text nodes**: `text` (string) - Text content
+  - **link nodes**: `url` (string) - URL to link to
+  - **group nodes**: Group styling properties
+  
+  Optional properties:
+  - `color` (string) - Color code "1"-"6" or hex value
+  - `label` (string) - Node label
+</ParamField>
+
+<ParamField path="edges" type="list[dict]" required>
+  List of edge objects following JSON Canvas 1.0 spec. Each edge must have:
+  - `id` (string) - Unique identifier
+  - `fromNode` (string) - Source node ID
+  - `toNode` (string) - Target node ID
+  
+  Optional properties:
+  - `label` (string) - Edge label
+  - `color` (string) - Color code or hex value
+  - `fromSide` (string) - "top", "right", "bottom", "left"
+  - `toSide` (string) - "top", "right", "bottom", "left"
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  The title of the canvas (saved as `title.canvas`)
+</ParamField>
+
+<ParamField path="directory" type="string" required>
+  Directory path relative to project root. Examples:
+  - `diagrams`
+  - `projects/2025`
+  - `visual/maps`
+</ParamField>
+
+<ParamField path="project" type="string">
+  Project name to create canvas in. Optional - server resolves using hierarchy.
+</ParamField>
+
+<ParamField path="workspace" type="string">
+  Cloud workspace name or tenant_id
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string">
+  A summary of the created canvas file including:
+  - Creation/update status
+  - File path
+  - Confirmation that canvas is ready to open in Obsidian
+</ResponseField>
+
+### JSON Canvas Structure
+
+The canvas file follows the JSON Canvas 1.0 specification:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "node1",
+      "type": "file",
+      "file": "docs/Document.md",
+      "x": 0,
+      "y": 0,
+      "width": 400,
+      "height": 300,
+      "color": "1"
+    },
+    {
+      "id": "node2",
+      "type": "text",
+      "text": "## Important Note\n\nThis is a text node.",
+      "x": 500,
+      "y": 0,
+      "width": 400,
+      "height": 200
+    },
+    {
+      "id": "node3",
+      "type": "link",
+      "url": "https://example.com",
+      "x": 1000,
+      "y": 0,
+      "width": 300,
+      "height": 150
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge1",
+      "fromNode": "node1",
+      "toNode": "node2",
+      "label": "connects to",
+      "color": "2"
+    },
+    {
+      "id": "edge2",
+      "fromNode": "node2",
+      "toNode": "node3",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ]
+}
+```
+
+### Node Types
+
+#### File Node
+
+References an existing file in the knowledge base:
+
+```json
+{
+  "id": "file-node",
+  "type": "file",
+  "file": "docs/Document Name.md",
+  "x": 0,
+  "y": 0,
+  "width": 400,
+  "height": 300
+}
+```
+
+**Important:** Use the exact file path as shown in Obsidian, not permalink format.
+
+#### Text Node
+
+Contains markdown text content:
+
+```json
+{
+  "id": "text-node",
+  "type": "text",
+  "text": "## Heading\n\nMarkdown content here.",
+  "x": 500,
+  "y": 0,
+  "width": 400,
+  "height": 250
+}
+```
+
+#### Link Node
+
+Contains a URL:
+
+```json
+{
+  "id": "link-node",
+  "type": "link",
+  "url": "https://example.com",
+  "x": 1000,
+  "y": 0,
+  "width": 300,
+  "height": 150
+}
+```
+
+#### Group Node
+
+Groups other nodes visually:
+
+```json
+{
+  "id": "group-node",
+  "type": "group",
+  "x": -50,
+  "y": -50,
+  "width": 600,
+  "height": 500,
+  "label": "Related Concepts",
+  "color": "3"
+}
+```
+
+### Edge Configuration
+
+#### Basic Edge
+
+```json
+{
+  "id": "edge1",
+  "fromNode": "node1",
+  "toNode": "node2"
+}
+```
+
+#### Labeled Edge
+
+```json
+{
+  "id": "edge2",
+  "fromNode": "node1",
+  "toNode": "node2",
+  "label": "depends on",
+  "color": "1"
+}
+```
+
+#### Directional Edge
+
+```json
+{
+  "id": "edge3",
+  "fromNode": "node1",
+  "toNode": "node2",
+  "fromSide": "right",
+  "toSide": "left"
+}
+```
+
+Valid sides: `"top"`, `"right"`, `"bottom"`, `"left"`
+
+### Color Codes
+
+Colors can be specified as:
+- **Numbered colors**: "1" through "6" (Obsidian's default palette)
+- **Hex colors**: "#FF5733", "#3498DB", etc.
+
+### Examples
+
+#### Simple Concept Map
+
+```python
+canvas(
+    nodes=[
+        {
+            "id": "concept1",
+            "type": "text",
+            "text": "# Main Concept",
+            "x": 0,
+            "y": 0,
+            "width": 400,
+            "height": 200
+        },
+        {
+            "id": "concept2",
+            "type": "text",
+            "text": "# Related Concept",
+            "x": 500,
+            "y": 0,
+            "width": 400,
+            "height": 200
+        }
+    ],
+    edges=[
+        {
+            "id": "edge1",
+            "fromNode": "concept1",
+            "toNode": "concept2",
+            "label": "relates to"
+        }
+    ],
+    title="Concept Map",
+    directory="diagrams"
+)
+```
+
+#### Document Relationship Diagram
+
+```python
+canvas(
+    nodes=[
+        {
+            "id": "spec",
+            "type": "file",
+            "file": "specs/API Specification.md",
+            "x": 0,
+            "y": 0,
+            "width": 400,
+            "height": 300,
+            "color": "1"
+        },
+        {
+            "id": "impl",
+            "type": "file",
+            "file": "docs/Implementation.md",
+            "x": 500,
+            "y": 0,
+            "width": 400,
+            "height": 300,
+            "color": "2"
+        },
+        {
+            "id": "tests",
+            "type": "file",
+            "file": "docs/Test Plan.md",
+            "x": 1000,
+            "y": 0,
+            "width": 400,
+            "height": 300,
+            "color": "3"
+        }
+    ],
+    edges=[
+        {
+            "id": "e1",
+            "fromNode": "spec",
+            "toNode": "impl",
+            "label": "implements"
+        },
+        {
+            "id": "e2",
+            "fromNode": "impl",
+            "toNode": "tests",
+            "label": "tested by"
+        }
+    ],
+    title="API Development Flow",
+    directory="visual/maps",
+    project="work-project"
+)
+```
+
+#### Process Flow with Groups
+
+```python
+canvas(
+    nodes=[
+        {
+            "id": "group1",
+            "type": "group",
+            "x": -50,
+            "y": -50,
+            "width": 600,
+            "height": 400,
+            "label": "Planning Phase",
+            "color": "4"
+        },
+        {
+            "id": "step1",
+            "type": "text",
+            "text": "## Requirements",
+            "x": 0,
+            "y": 0,
+            "width": 250,
+            "height": 150
+        },
+        {
+            "id": "step2",
+            "type": "text",
+            "text": "## Design",
+            "x": 300,
+            "y": 0,
+            "width": 250,
+            "height": 150
+        },
+        {
+            "id": "step3",
+            "type": "text",
+            "text": "## Implementation",
+            "x": 600,
+            "y": 0,
+            "width": 250,
+            "height": 150
+        }
+    ],
+    edges=[
+        {
+            "id": "e1",
+            "fromNode": "step1",
+            "toNode": "step2",
+            "fromSide": "right",
+            "toSide": "left"
+        },
+        {
+            "id": "e2",
+            "fromNode": "step2",
+            "toNode": "step3",
+            "fromSide": "right",
+            "toSide": "left"
+        }
+    ],
+    title="Development Process",
+    directory="diagrams"
+)
+```
+
+### Important Notes
+
+1. **File Paths**: When referencing files, use the exact path as shown in Obsidian (e.g., "docs/Document Name.md"), not permalink format.
+
+2. **File Existence**: For file nodes, the referenced file must exist in the knowledge base.
+
+3. **Coordinates**: Position nodes using x,y coordinates in pixels. Plan a logical layout before creating the canvas.
+
+4. **Node Sizing**: Provide appropriate width and height for each node based on its content.
+
+5. **Uniqueness**: Each node and edge must have a unique `id`.
+
+6. **Updates**: If a canvas file already exists, it will be updated with the new content.
+
+### See Also
+
+For the full JSON Canvas 1.0 specification, see the [canvas spec resource](spec://canvas).

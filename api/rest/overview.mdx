@@ -1,0 +1,176 @@
+---
+title: REST API Overview
+description: Introduction to the Basic Memory REST API with base URLs and versioning
+---
+
+The Basic Memory REST API provides programmatic access to your knowledge graph, enabling CRUD operations on entities, search functionality, and project management.
+
+## Base URL
+
+The API base URL depends on your deployment mode:
+
+### Local Mode
+
+When running Basic Memory locally, the API is available at:
+
+```
+http://localhost:8000
+```
+
+The local API server starts automatically when you use MCP tools or can be started manually:
+
+```bash
+basic-memory api
+```
+
+### Cloud Mode
+
+For cloud deployments, the API is available at:
+
+```
+https://api.basicmemory.com
+```
+
+Cloud mode requires authentication with an API key (see [Authentication](/api/rest/authentication)).
+
+## API Versioning
+
+Basic Memory uses versioned API endpoints to ensure stability:
+
+- **v2 (Current)**: Uses external UUIDs for stable references across renames and moves
+- **v1 (Legacy)**: Uses string-based project names (deprecated)
+
+### V2 Endpoint Structure
+
+All v2 endpoints follow this pattern:
+
+```
+/v2/projects/{project_id}/{resource}
+```
+
+Where:
+- `{project_id}` - Project external UUID (stable identifier)
+- `{resource}` - The resource type (knowledge, search, etc.)
+
+**Example:**
+```
+GET /v2/projects/550e8400-e29b-41d4-a716-446655440000/knowledge/entities/abc-123
+```
+
+## Response Format
+
+All API responses use JSON format with consistent structure:
+
+### Success Response
+
+```json
+{
+  "external_id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "My Note",
+  "permalink": "my-note",
+  "file_path": "my-note.md",
+  "note_type": "note",
+  "content_type": "text/markdown",
+  "created_at": "2026-02-28T14:30:00Z",
+  "updated_at": "2026-02-28T14:30:00Z"
+}
+```
+
+### Error Response
+
+```json
+{
+  "detail": "Entity not found: 'invalid-id'"
+}
+```
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes:
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 404 | Not Found |
+| 409 | Conflict (entity already exists) |
+| 500 | Internal Server Error |
+
+## Rate Limiting
+
+### Local Mode
+No rate limiting is applied when running locally.
+
+### Cloud Mode
+Rate limits apply based on your subscription tier:
+
+- **Free tier**: 100 requests per minute
+- **Pro tier**: 1,000 requests per minute
+- **Enterprise**: Custom limits
+
+Rate limit headers are included in all responses:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1709136000
+```
+
+## Content Types
+
+The API supports multiple content types:
+
+| Content Type | Description |
+|--------------|-------------|
+| `text/markdown` | Markdown files (default) |
+| `text/plain` | Plain text files |
+| `application/pdf` | PDF documents |
+| `image/jpeg` | JPEG images |
+| `image/png` | PNG images |
+| `image/svg+xml` | SVG images |
+
+## Pagination
+
+Endpoints that return lists support pagination via query parameters:
+
+```
+GET /v2/projects/{project_id}/search?page=2&page_size=20
+```
+
+<ParamField query="page" type="integer" default="1">
+  Page number (1-indexed)
+</ParamField>
+
+<ParamField query="page_size" type="integer" default="10">
+  Number of results per page (max 100)
+</ParamField>
+
+Paginated responses include:
+
+```json
+{
+  "results": [...],
+  "current_page": 2,
+  "page_size": 20,
+  "has_more": true
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/rest/authentication">
+    Learn how to authenticate API requests
+  </Card>
+  <Card title="Entities" icon="file" href="/api/rest/entities">
+    CRUD operations for knowledge entities
+  </Card>
+  <Card title="Search" icon="magnifying-glass" href="/api/rest/search">
+    Search across your knowledge graph
+  </Card>
+  <Card title="Projects" icon="folder" href="/api/rest/projects">
+    Manage multiple projects
+  </Card>
+</CardGroup>

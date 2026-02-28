@@ -1,0 +1,445 @@
+---
+title: Import Commands
+description: Import data from external sources
+---
+
+Import commands allow you to bring data from external sources into your Basic Memory knowledge base.
+
+## bm import claude conversations
+
+Import chat conversations from Claude.ai.
+
+```bash
+bm import claude conversations [CONVERSATIONS_JSON] [OPTIONS]
+```
+
+### Arguments
+
+- `CONVERSATIONS_JSON` - Path to conversations.json file (default: conversations.json)
+
+### Options
+
+- `--folder TEXT` - Folder to place the files in (default: conversations)
+
+### How to Export from Claude.ai
+
+1. Visit Claude.ai
+2. Go to Settings → Data & Privacy
+3. Click "Export data"
+4. Download the `conversations.json` file
+
+### Examples
+
+```bash
+# Import from default location
+bm import claude conversations
+
+# Import from specific file
+bm import claude conversations ~/Downloads/conversations.json
+
+# Import to specific folder
+bm import claude conversations --folder claude-chats
+```
+
+### What Gets Imported
+
+The importer:
+
+1. Reads chat data and nested messages
+2. Creates markdown files for each conversation
+3. Formats content in clean, readable markdown
+4. Preserves conversation structure and timestamps
+
+### Output
+
+```bash
+Importing chats from conversations.json...writing to ~/Documents/research/conversations
+
+╭───────────────────────────────────────────────╮
+│ Import complete!                              │
+│                                               │
+│ Imported 15 conversations                     │
+│ Containing 247 messages                       │
+╰───────────────────────────────────────────────╯
+
+Run 'bm reindex --search' to index the new files.
+```
+
+### File Format
+
+Each conversation is saved as:
+
+```markdown
+---
+title: Conversation Title
+date: 2024-01-15
+tags: [conversation, claude]
+---
+
+# Conversation Title
+
+## User
+
+User message content here...
+
+## Assistant
+
+Claude's response here...
+```
+
+## bm import chatgpt
+
+Import conversations from ChatGPT JSON export.
+
+```bash
+bm import chatgpt [CONVERSATIONS_JSON] [OPTIONS]
+```
+
+### Arguments
+
+- `CONVERSATIONS_JSON` - Path to ChatGPT conversations.json file (default: conversations.json)
+
+### Options
+
+- `--folder TEXT` - Folder to place the files in (default: conversations)
+
+### How to Export from ChatGPT
+
+1. Visit ChatGPT
+2. Click your profile → Settings
+3. Go to Data Controls
+4. Click "Export data"
+5. Wait for email with download link
+6. Download and extract `conversations.json`
+
+### Examples
+
+```bash
+# Import from default location
+bm import chatgpt
+
+# Import from specific file
+bm import chatgpt ~/Downloads/conversations.json
+
+# Import to specific folder
+bm import chatgpt --folder chatgpt-history
+```
+
+### What Gets Imported
+
+The importer:
+
+1. Reads the complex tree structure of messages
+2. Converts them to linear markdown conversations
+3. Saves as clean, readable markdown files
+4. Preserves message ordering and timestamps
+
+### Output
+
+```bash
+Importing chats from conversations.json...writing to ~/Documents/research/conversations
+
+╭───────────────────────────────────────────────╮
+│ Import complete!                              │
+│                                               │
+│ Imported 23 conversations                     │
+│ Containing 412 messages                       │
+╰───────────────────────────────────────────────╯
+
+Run 'bm reindex --search' to index the new files.
+```
+
+### File Format
+
+Each conversation is saved as:
+
+```markdown
+---
+title: Conversation Title
+date: 2024-01-15
+tags: [conversation, chatgpt]
+---
+
+# Conversation Title
+
+## User
+
+User message content here...
+
+## Assistant
+
+ChatGPT's response here...
+```
+
+## bm import memory-json
+
+Import entities and relations from a memory.json file.
+
+```bash
+bm import memory-json [JSON_PATH] [OPTIONS]
+```
+
+### Arguments
+
+- `JSON_PATH` - Path to memory.json file (default: memory.json)
+
+### Options
+
+- `--destination-folder TEXT` - Optional destination folder within the project
+
+### File Format
+
+The memory.json file should contain JSON Lines format (one JSON object per line):
+
+```json
+{"entities": [{"name": "Alice", "observations": ["[role] Software Engineer"]}, {"name": "Bob"}], "relations": [{"from": "Alice", "to": "Bob", "relation_type": "works_with"}]}
+{"entities": [{"name": "Project X", "observations": ["[status] active"]}]}
+```
+
+### Examples
+
+```bash
+# Import from default location
+bm import memory-json
+
+# Import from specific file
+bm import memory-json ~/Downloads/memory.json
+
+# Import to specific folder
+bm import memory-json --destination-folder imported
+
+# Import to subfolder
+bm import memory-json memory.json --destination-folder people/imported
+```
+
+### What Gets Imported
+
+The importer:
+
+1. Reads entities and relations from the JSON file
+2. Creates markdown files for each entity
+3. Includes outgoing relations in each entity's markdown
+4. Preserves observations and metadata
+
+### Output
+
+```bash
+Importing from memory.json...writing to ~/Documents/research
+
+╭───────────────────────────────────────────────╮
+│ Import complete!                              │
+│                                               │
+│ Created 12 entities                           │
+│ Added 8 relations                             │
+│ Skipped 2 entities                            │
+╰───────────────────────────────────────────────╯
+```
+
+### File Format
+
+Each entity is saved as:
+
+```markdown
+---
+title: Alice
+tags: [imported]
+---
+
+# Alice
+
+- [role] Software Engineer
+- works_with [[Bob]]
+```
+
+## Post-Import Steps
+
+After importing data, you should reindex your knowledge base:
+
+```bash
+# Reindex for full-text search
+bm reindex --search
+
+# Reindex for semantic search (if enabled)
+bm reindex --embeddings
+```
+
+This ensures:
+
+- New content is searchable
+- Relations are resolved
+- Knowledge graph is updated
+- Embeddings are generated (if semantic search is enabled)
+
+## Import Workflows
+
+### Import Claude Conversations
+
+```bash
+# 1. Export from Claude.ai
+# 2. Download conversations.json to ~/Downloads/
+
+# 3. Import to Basic Memory
+bm import claude conversations ~/Downloads/conversations.json --folder claude
+
+# 4. Reindex
+bm reindex --search
+
+# 5. Search imported content
+bm tool search-notes "topic" --tag claude
+```
+
+### Import ChatGPT History
+
+```bash
+# 1. Export from ChatGPT
+# 2. Extract conversations.json from archive
+
+# 3. Import to Basic Memory
+bm import chatgpt conversations.json --folder chatgpt
+
+# 4. Reindex
+bm reindex --search
+
+# 5. View recent imports
+bm tool recent-activity --tag chatgpt
+```
+
+### Import Memory JSON
+
+```bash
+# 1. Prepare memory.json file with entities and relations
+
+# 2. Import to Basic Memory
+bm import memory-json memory.json --destination-folder imported
+
+# 3. Reindex
+bm reindex --search
+
+# 4. Check imported entities
+bm tool search-notes --tag imported
+```
+
+## Import Best Practices
+
+### Before Importing
+
+1. **Backup your data** - Create a snapshot if using cloud
+   ```bash
+   bm cloud snapshot create "before import"
+   ```
+
+2. **Review the source file** - Make sure it's the correct export
+   ```bash
+   head -n 20 conversations.json
+   ```
+
+3. **Test with dry run** - Use a test project first
+   ```bash
+   bm project add test-import ~/Documents/test
+   bm import claude conversations --folder test
+   ```
+
+### During Import
+
+1. **Monitor progress** - Watch for errors in output
+2. **Check file count** - Verify expected number of files created
+3. **Verify disk space** - Ensure sufficient space for large imports
+
+### After Importing
+
+1. **Reindex immediately**
+   ```bash
+   bm reindex --search
+   ```
+
+2. **Spot check content**
+   ```bash
+   bm tool search-notes --after_date 1h
+   bm tool read-note <sample-note>
+   ```
+
+3. **Update project info**
+   ```bash
+   bm project info
+   ```
+
+## Troubleshooting
+
+### Import Failed
+
+```bash
+Error during import: File not found: conversations.json
+```
+
+**Solution:** Check file path and ensure file exists:
+
+```bash
+ls -lh conversations.json
+bm import claude conversations ~/Downloads/conversations.json
+```
+
+### Invalid JSON Format
+
+```bash
+Error during import: Invalid JSON format
+```
+
+**Solution:** Validate JSON file:
+
+```bash
+# Check if valid JSON
+jq . conversations.json > /dev/null
+
+# Show first few lines
+head -n 10 conversations.json
+```
+
+### Duplicate Content
+
+If you import the same data twice, Basic Memory will:
+
+- Overwrite existing files with the same name
+- Preserve your manual edits if filenames differ
+
+**Solution:** Import to different folders:
+
+```bash
+bm import claude conversations --folder claude-2024-01
+bm import claude conversations --folder claude-2024-02
+```
+
+### No Files Created
+
+```bash
+Import complete!
+
+Imported 0 conversations
+Containing 0 messages
+```
+
+**Solution:** Check export file format and contents:
+
+```bash
+# View file structure
+jq 'keys' conversations.json
+
+# Count conversations
+jq '. | length' conversations.json
+```
+
+## Data Privacy
+
+All import operations:
+
+- Run locally on your machine
+- Never send data to external services
+- Store files in your local project directory
+- Can be used offline
+
+Your conversation history remains private and under your control.
+
+## Related Commands
+
+- [bm reindex](/api/cli/maintenance#bm-reindex) - Reindex imported content
+- [bm project info](/api/cli/project-commands#bm-project-info) - View project statistics
+- [bm tool search-notes](/api/cli/tool-commands#bm-tool-search-notes) - Search imported content

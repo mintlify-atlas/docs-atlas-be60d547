@@ -1,0 +1,487 @@
+---
+title: Markdown Format
+description: Complete syntax reference for Basic Memory's structured markdown format
+---
+
+Basic Memory uses plain Markdown with semantic conventions for observations and relations. This page documents the complete format with examples.
+
+## Document Structure
+
+Every Basic Memory note has three parts:
+
+```markdown
+---
+# 1. YAML Frontmatter (metadata)
+title: Coffee Brewing Methods
+type: note
+tags: [coffee, brewing]
+permalink: coffee-brewing-methods
+---
+
+# 2. Content (your writing)
+
+Your regular markdown content goes here.
+Write whatever you want - this is preserved exactly.
+
+# 3. Semantic Sections (optional)
+
+- [method] Pour over provides more flavor clarity
+- implements [[Search Design]]
+```
+
+<Info>
+The `## Observations` and `## Relations` headings are conventional but NOT required. The parser detects observations and relations by their syntax patterns anywhere in the document.
+</Info>
+
+## Frontmatter
+
+YAML metadata between `---` fences at the top of the file:
+
+```yaml
+---
+title: Coffee Brewing Methods
+type: note
+tags: [coffee, brewing]
+permalink: coffee-brewing-methods
+---
+```
+
+### Standard Fields
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `title` | No | filename stem | Display name for the entity |
+| `type` | No | `note` | Entity type for filtering |
+| `tags` | No | `[]` | List or comma-separated string |
+| `permalink` | No | generated | Stable identifier |
+| `schema` | No | none | Schema reference (see [Schemas](/guides/schemas)) |
+
+### Custom Fields
+
+Any fields not in the standard set are stored as `entity_metadata`:
+
+```yaml
+---
+title: Paul Graham
+type: Person
+tags: [startups, essays, lisp]
+permalink: paul-graham
+# Custom fields below
+status: active
+source: wikipedia
+last_updated: 2024-01-15
+---
+```
+
+`status`, `source`, and `last_updated` are searchable via metadata filters.
+
+### Value Types
+
+YAML automatically converts values. Basic Memory normalizes them:
+
+- **Dates** (`2025-10-24`) → ISO format strings
+- **Numbers** (`1.0`) → strings
+- **Booleans** (`true`) → strings (`"True"`)
+- **Lists** and **dicts** → preserved, items normalized recursively
+
+<Warning>
+This prevents `AttributeError` when code expects strings and calls string methods like `.strip()` on these values.
+</Warning>
+
+## Observations
+
+Categorized facts about an entity, written as Markdown list items.
+
+### Syntax
+
+```markdown
+- [category] content text #tag1 #tag2 (optional context)
+```
+
+| Part | Required | Example |
+|------|----------|----------|
+| `[category]` | Yes* | `[method]`, `[tip]`, `[fact]` |
+| content | Yes | The actual statement |
+| `#tags` | No | `#brewing #coffee` |
+| `(context)` | No | `(personal preference)` |
+
+*If omitted with hashtags present, category defaults to `Note`.
+
+### Examples
+
+<CodeGroup>
+```markdown Basic
+- [tech] Uses SQLite for storage
+- [design] Follows local-first architecture
+- [decision] Selected bcrypt for passwords
+```
+
+```markdown With Tags
+- [tip] Use filtered water #quality #water
+- [technique] Preheat equipment #temperature #preparation
+- [fact] Lighter roasts contain more caffeine #science
+```
+
+```markdown With Context
+- [decision] Using FastAPI for API layer (better async support)
+- [preference] Ethiopian beans for pour over (personal taste)
+- [source] James Hoffman recommends 30s bloom (YouTube)
+```
+
+```markdown Repeated Categories
+- [name] Paul Graham
+- [expertise] Startups
+- [expertise] Lisp programming
+- [expertise] Essay writing
+- [role] Co-founder of Y Combinator
+```
+
+```markdown Tags Without Category
+- Write about coffee methods #todo #coffee
+- Research grind sizes #research #equipment
+```
+</CodeGroup>
+
+### Observation Categories
+
+No fixed vocabulary - use what makes sense for your domain. Common patterns:
+
+<Tabs>
+  <Tab title="General">
+    - `[fact]` - Objective information
+    - `[note]` - General observations
+    - `[idea]` - Thoughts or concepts
+    - `[question]` - Open questions
+    - `[todo]` - Action items
+  </Tab>
+  <Tab title="Technical">
+    - `[tech]` - Technology used
+    - `[design]` - Design decisions
+    - `[decision]` - Architectural choices
+    - `[implementation]` - How it's built
+    - `[bug]` - Issues or bugs
+  </Tab>
+  <Tab title="People">
+    - `[name]` - Full name
+    - `[role]` - Job title or position
+    - `[expertise]` - Areas of knowledge
+    - `[contact]` - Contact information
+  </Tab>
+  <Tab title="Content">
+    - `[method]` - How to do something
+    - `[tip]` - Helpful advice
+    - `[technique]` - Specific approach
+    - `[preference]` - Personal choices
+    - `[resource]` - Reference materials
+  </Tab>
+</Tabs>
+
+### Parser Exclusions
+
+These list item patterns are NOT treated as observations:
+
+```markdown
+# Task lists (checkboxes)
+- [ ] Todo item
+- [x] Completed task
+- [-] Cancelled task
+
+# Markdown links
+- [Link text](https://example.com)
+- [Another link](./local-file.md)
+
+# Bare wiki links (these become relations)
+- [[Target Entity]]
+- [[Another Note]]
+```
+
+## Relations
+
+Directional connections between entities that form the knowledge graph.
+
+### Explicit Relations
+
+List items with relation type and wiki link:
+
+```markdown
+- relation_type [[Target Entity]] (optional context)
+```
+
+| Part | Required | Example |
+|------|----------|----------|
+| `relation_type` | No* | `implements`, `depends_on`, `works_at` |
+| `[[Target]]` | Yes | `[[Search Design]]` |
+| `(context)` | No | `(since 2020)` |
+
+*If omitted, defaults to `relates_to`.
+
+### Examples
+
+<CodeGroup>
+```markdown Code Relations
+- implements [[Search Design]]
+- depends_on [[Database Schema]]
+- extends [[Base Service]]
+- refactors [[Legacy Code]]
+```
+
+```markdown People Relations
+- works_at [[Y Combinator]] (co-founder)
+- authored [[Hackers and Painters]]
+- collaborated_with [[Robert Morris]]
+- mentored_by [[Trevor Blackwell]]
+```
+
+```markdown Content Relations
+- inspired_by [[Local-First Software]]
+- contrasts_with [[Cloud-First Architecture]]
+- part_of [[Q1 Planning]]
+- supersedes [[Old Approach]]
+```
+
+```markdown Default Type
+- [[Related Concept]]           # becomes "relates_to"
+- [[Another Topic]]              # becomes "relates_to"
+```
+</CodeGroup>
+
+### Inline Relations
+
+Wiki links in regular prose create implicit `links_to` relations:
+
+```markdown
+This approach builds on [[Core Design]] and uses [[Utility Functions]].
+The implementation was inspired by [[Local-First Software]] principles.
+```
+
+Creates three `links_to` relations automatically.
+
+### Common Relation Types
+
+<AccordionGroup>
+  <Accordion title="Code & Design">
+    - `implements` - Realizes a design or spec
+    - `depends_on` - Requires another component
+    - `extends` - Inherits from or builds upon
+    - `refactors` - Improves or replaces
+    - `tests` - Provides test coverage for
+  </Accordion>
+  <Accordion title="Organization">
+    - `part_of` - Belongs to a larger whole
+    - `contains` - Has as a component
+    - `categorized_as` - Type classification
+    - `belongs_to` - Ownership relationship
+  </Accordion>
+  <Accordion title="Temporal">
+    - `follows` - Comes after
+    - `precedes` - Comes before
+    - `supersedes` - Replaces or obsoletes
+    - `continues` - Resumes or extends
+  </Accordion>
+  <Accordion title="People">
+    - `works_at` - Employment relationship
+    - `authored` - Created or wrote
+    - `collaborated_with` - Worked together
+    - `mentored_by` - Learning relationship
+    - `reports_to` - Organizational hierarchy
+  </Accordion>
+  <Accordion title="Conceptual">
+    - `inspired_by` - Influenced by
+    - `based_on` - Derived from
+    - `contrasts_with` - Differs from
+    - `similar_to` - Resembles
+    - `relates_to` - Generic connection
+  </Accordion>
+</AccordionGroup>
+
+### Forward References
+
+Link to entities that don't exist yet:
+
+```markdown
+# Current Note
+
+- implements [[Future Feature]]  # Not created yet
+- depends_on [[Planned Component]]  # Will create later
+```
+
+Basic Memory tracks these as unresolved relations. When you create the target entity, the relation automatically resolves.
+
+## Complete Examples
+
+### Simple Note (No Schema)
+
+```markdown
+---
+title: Project Ideas
+type: note
+tags: [ideas, brainstorm]
+---
+
+# Project Ideas
+
+Some interesting projects I want to explore.
+
+## Observations
+
+- [idea] Build a CLI tool for markdown linting #tooling
+- [idea] Create a recipe knowledge base #cooking
+- [priority] Focus on developer tools first (Q1 goal)
+- [question] Should we use TypeScript or Python?
+
+## Relations
+
+- inspired_by [[Developer Workflow Research]]
+- part_of [[Q1 Planning]]
+- relates_to [[Side Projects]]
+```
+
+### Person Note
+
+```markdown
+---
+title: Paul Graham
+type: Person
+tags: [startups, essays, lisp]
+permalink: paul-graham
+---
+
+# Paul Graham
+
+Essayist, programmer, and venture capitalist.
+
+## Observations
+
+- [name] Paul Graham
+- [role] Co-founder of Y Combinator
+- [expertise] Startups
+- [expertise] Lisp programming
+- [expertise] Essay writing
+- [fact] Created Viaweb, the first web application (1995)
+- [fact] PhD in Computer Science from Harvard
+- [writing_style] Clear, conversational essays
+
+## Relations
+
+- works_at [[Y Combinator]]
+- authored [[Hackers and Painters]]
+- collaborated_with [[Robert Morris]]
+- inspired_by [[John McCarthy]]
+```
+
+### Technical Note with Schema
+
+```markdown
+---
+title: Authentication Service
+type: Service
+schema: SoftwareComponent
+tags: [auth, security, backend]
+status: production
+version: 2.1.0
+---
+
+# Authentication Service
+
+Handles user authentication and session management.
+
+## Overview
+
+The authentication service provides JWT-based authentication
+with support for OAuth providers and 2FA.
+
+## Observations
+
+- [tech] FastAPI with Pydantic validation
+- [tech] PostgreSQL for user data
+- [tech] Redis for session storage
+- [design] JWT tokens with 1-hour expiration
+- [design] Refresh tokens stored in httpOnly cookies
+- [decision] Using bcrypt for password hashing (OWASP recommended)
+- [security] Rate limiting on login endpoints #rate-limiting
+- [security] CORS configured for prod domains only
+- [monitoring] Prometheus metrics exposed on /metrics
+
+## Relations
+
+- implements [[Auth Design Spec]]
+- depends_on [[User Service]]
+- depends_on [[Email Service]]
+- uses [[Database Schema]]
+- tested_by [[Auth Integration Tests]]
+- deployed_to [[Production Cluster]]
+```
+
+### Meeting Notes
+
+```markdown
+---
+title: Architecture Review 2024-01-15
+type: Meeting
+tags: [architecture, planning]
+date: 2024-01-15
+attendees: [alice, bob, charlie]
+---
+
+# Architecture Review 2024-01-15
+
+## Observations
+
+- [attendee] Alice Chen
+- [attendee] Bob Smith
+- [attendee] Charlie Davis
+- [decision] Moving to microservices architecture
+- [decision] Using gRPC for inter-service communication
+- [action_item] Alice to draft service boundaries (by Friday)
+- [action_item] Bob to research gRPC libraries
+- [blocker] Need approval for AWS budget increase
+- [next_steps] Follow-up meeting next Tuesday
+
+## Relations
+
+- follows [[Scaling Discussion]]
+- part_of [[Q1 Architecture Sprint]]
+- blocked_by [[Budget Approval]]
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Consistent Categories" icon="tags">
+    Establish conventions for observation categories in your domain. This makes filtering and searching more effective.
+  </Card>
+  <Card title="Add Context" icon="comment">
+    Use the `(context)` field to provide source attribution, timeframes, or clarifying details.
+  </Card>
+  <Card title="Leverage Tags" icon="hashtag">
+    Add inline tags to observations for fine-grained filtering. Tags on observations are more flexible than frontmatter tags.
+  </Card>
+  <Card title="Choose Relation Types Carefully" icon="link">
+    Use specific relation types (`implements`, `depends_on`) rather than generic ones (`relates_to`) when the relationship is clear.
+  </Card>
+</CardGroup>
+
+## Validation
+
+Check your markdown format:
+
+```bash
+# Parse a file and check for issues
+basic-memory sync --dry-run
+
+# Validate against a schema (if using schemas)
+basic-memory schema validate path/to/file.md
+```
+
+See [Schemas Guide](/guides/schemas) for schema-based validation.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="How It Works" icon="gear" href="/concepts/how-it-works">
+    Understand the architecture and sync process
+  </Card>
+  <Card title="MCP Integration" icon="plug" href="/concepts/mcp-integration">
+    Learn how AI assistants use this format
+  </Card>
+</CardGroup>

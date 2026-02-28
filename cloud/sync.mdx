@@ -1,0 +1,546 @@
+---
+title: Bidirectional Synchronization
+description: Set up two-way sync between local files and cloud storage with rclone bisync
+---
+
+## Overview
+
+Basic Memory Cloud uses **rclone bisync** for bidirectional file synchronization between your local filesystem and cloud storage. This enables:
+
+- Two-way sync: changes in either location are propagated to the other
+- Conflict detection and resolution
+- Integrity verification with checksums
+- Incremental sync (only changed files)
+- Dry-run preview before syncing
+
+<Warning>
+  Cloud sync requires an active subscription and authenticated cloud access. Run `bm cloud login` before setting up sync.
+</Warning>
+
+## Initial Setup
+
+### Step 1: Install and Configure rclone
+
+Run the cloud setup wizard to install rclone and configure credentials:
+
+```bash
+bm cloud setup
+```
+
+This command:
+1. Downloads and installs rclone (if not present)
+2. Fetches your tenant information from the cloud API
+3. Generates scoped S3 credentials for sync
+4. Configures the rclone remote named `basicmemory-cloud`
+
+**Example output:**
+```
+Basic Memory Cloud Setup
+Setting up cloud sync with rclone...
+
+Step 1: Installing rclone...
+✓ rclone already installed at /usr/local/bin/rclone
+
+Step 2: Getting tenant information...
+✓ Found tenant: 11111111-1111-1111-1111-111111111111
+
+Step 3: Generating sync credentials...
+✓ Generated secure credentials
+
+Step 4: Configuring rclone remote...
+✓ Remote 'basicmemory-cloud' configured
+
+✓ Cloud setup completed successfully!
+
+Next steps:
+1. Add a project with local sync path:
+   bm project add research --cloud --local-path ~/Documents/research
+
+   Or configure sync for an existing project:
+   bm project sync-setup research ~/Documents/research
+
+2. Preview the initial sync (recommended):
+   bm cloud bisync --name research --resync --dry-run
+
+3. If all looks good, run the actual sync:
+   bm cloud bisync --name research --resync
+
+4. Subsequent syncs (no --resync needed):
+   bm cloud bisync --name research
+
+Tip: Always use --dry-run first to preview changes before syncing
+```
+
+### Step 2: Configure Project Sync
+
+Each project needs a local sync path configured:
+
+#### Option A: Create New Project with Sync
+
+```bash
+bm project add research --cloud --local-path ~/Documents/research
+```
+
+#### Option B: Configure Existing Project
+
+```bash
+bm cloud sync-setup research ~/Documents/research
+```
+
+This command:
+- Verifies the project exists in the cloud
+- Creates the local directory if needed
+- Updates project configuration with sync path
+- Creates the project in local database for MCP access
+
+<Note>
+  The local sync path should be a dedicated directory for the project. Don't use your default Basic Memory directory (`~/basic-memory`) unless that's specifically what you want to sync.
+</Note>
+
+## Sync Operations
+
+### Bidirectional Sync (bisync)
+
+The primary sync operation for two-way synchronization:
+
+```bash
+# First-time sync (establishes baseline)
+bm cloud bisync --name research --resync --dry-run  # Preview
+bm cloud bisync --name research --resync             # Perform
+
+# Subsequent syncs (incremental)
+bm cloud bisync --name research --dry-run  # Preview
+bm cloud bisync --name research             # Perform
+```
+
+#### Command Options
+
+| Option | Description |
+|--------|-------------|
+| `--name` | Project name to sync (required) |
+| `--resync` | Force new baseline (first sync or after conflicts) |
+| `--dry-run` | Preview changes without applying them |
+| `--verbose` | Show detailed output including file-by-file operations |
+
+#### First Sync: Resync Required
+
+The first sync for a project requires `--resync` to establish a baseline:
+
+```bash
+bm cloud bisync --name research --resync
+```
+
+**What happens:**
+1. rclone scans both local and cloud directories
+2. Creates a baseline snapshot of all files
+3. Stores metadata in `~/.cache/basic-memory/bisync/research/`
+4. Synchronizes any differences (usually cloud → local on first sync)
+5. Marks the project as initialized in config
+
+<Warning>
+  Always use `--dry-run` on first sync to preview what will be transferred:
+  
+  ```bash
+  bm cloud bisync --name research --resync --dry-run
+  ```
+  
+  Review the output carefully before running without `--dry-run`.
+</Warning>
+
+#### Incremental Syncs
+
+After the initial resync, subsequent syncs are incremental:
+
+```bash
+bm cloud bisync --name research
+```
+
+**What happens:**
+1. rclone compares current state against baseline
+2. Identifies changes in both local and cloud
+3. Propagates changes bidirectionally
+4. Detects and reports conflicts
+5. Updates baseline with new state
+
+### One-Way Sync (local → cloud)
+
+For scenarios where you want to force the cloud to match local:
+
+```bash
+# Preview
+bm cloud sync --name research --dry-run
+
+# Perform
+bm cloud sync --name research
+```
+
+<Warning>
+  One-way sync (`cloud sync`) makes the cloud **identical** to local, potentially deleting cloud files not present locally. Use with caution.
+</Warning>
+
+### Integrity Check
+
+Verify file integrity between local and cloud without syncing:
+
+```bash
+# Full check (both directions)
+bm cloud check --name research
+
+# One-way check (faster)
+bm cloud check --name research --one-way
+```
+
+**Example output:**
+```
+Checking research integrity...
+✓ research files match
+```
+
+Or if differences exist:
+```
+Checking research integrity...
+⚠ research has differences
+```
+
+## Conflict Resolution
+
+### Understanding Conflicts
+
+A conflict occurs when the same file is modified in both locations between syncs:
+
+```
+Error: bisync critical error: path1 and path2 are out of sync
+Please run with --resync to establish a new baseline
+```
+
+### Resolving Conflicts
+
+**Step 1: Review Changes**
+
+Check what changed locally and in the cloud before resolving.
+
+**Step 2: Backup Important Changes**
+
+If you have important local changes, back them up:
+
+```bash
+cp -r ~/Documents/research ~/Documents/research-backup
+```
+
+**Step 3: Decide on Resolution Strategy**
+
+#### Strategy A: Cloud Wins (Download latest)
+```bash
+# Preview what will be downloaded
+bm cloud bisync --name research --resync --dry-run
+
+# Apply cloud changes
+bm cloud bisync --name research --resync
+```
+
+#### Strategy B: Local Wins (Upload latest)
+```bash
+# Make cloud match local exactly
+bm cloud sync --name research --dry-run
+bm cloud sync --name research
+
+# Re-establish bisync baseline
+bm cloud bisync --name research --resync
+```
+
+#### Strategy C: Manual Merge
+1. Manually reconcile conflicting files
+2. Run resync to establish new baseline:
+   ```bash
+   bm cloud bisync --name research --resync
+   ```
+
+### Preventing Conflicts
+
+- **Sync frequently**: Run `bisync` regularly on each device
+- **Sync before major changes**: Always sync before editing many files
+- **Use snapshots**: Create snapshots before risky operations
+- **Avoid simultaneous edits**: Don't edit the same files on multiple devices simultaneously
+
+## Sync State Management
+
+### Bisync State Files
+
+Bisync stores state in `~/.cache/basic-memory/bisync/<project>/`:
+
+```
+~/.cache/basic-memory/bisync/research/
+├── basicmemory-cloud-research.path1.lst-new
+├── basicmemory-cloud-research.path1.lst-old
+├── basicmemory-cloud-research.path2.lst-new
+└── basicmemory-cloud-research.path2.lst-old
+```
+
+These files track the baseline state for incremental sync.
+
+### Resetting Bisync State
+
+If bisync gets into an inconsistent state, reset it:
+
+```bash
+bm cloud bisync-reset research
+```
+
+**Output:**
+```
+✓ Cleared bisync state for project 'research'
+
+Next steps:
+  1. Preview: bm cloud bisync --name research --resync --dry-run
+  2. Sync: bm cloud bisync --name research --resync
+```
+
+This removes state files, forcing a fresh `--resync` on next sync.
+
+### When to Reset State
+
+- Persistent conflict errors that won't resolve
+- After manually modifying many files on both sides
+- When cloud path changes (different workspace/bucket)
+- After restoring from snapshot
+
+## Ignore Patterns
+
+### .bmignore File
+
+Basic Memory uses `.bmignore` (gitignore-style syntax) to exclude files from sync:
+
+**Location:** `~/.basic-memory/.bmignore`
+
+**Default patterns:**
+```
+# Version control
+.git
+.svn
+
+# Dependencies
+node_modules
+venv
+.venv
+
+# Build outputs
+dist
+build
+target
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.temp
+.cache
+```
+
+### Editing Ignore Patterns
+
+1. Edit `~/.basic-memory/.bmignore` with your preferred editor
+2. Add patterns using gitignore syntax:
+   ```
+   # Ignore all Python cache files
+   __pycache__
+   *.pyc
+   
+   # Ignore specific directory
+   secrets/
+   
+   # Ignore file type
+   *.log
+   ```
+3. The patterns automatically convert to rclone filter format on next sync
+
+<Note>
+  The `.bmignore.rclone` file is auto-generated from `.bmignore`. Edit `.bmignore`, not the `.rclone` file.
+</Note>
+
+## Database Synchronization
+
+After file sync completes, Basic Memory triggers a database sync:
+
+```bash
+bm cloud bisync --name research
+```
+
+**What happens:**
+1. Files sync via rclone bisync
+2. CLI calls cloud API: `POST /api/projects/{id}/sync`
+3. Cloud server indexes new/changed files into SQLite database
+4. Knowledge graph updates with new entities and relations
+
+**Output:**
+```
+Bisync research (local <-> cloud)...
+✓ research bisync completed successfully
+Database sync initiated: Sync task started
+```
+
+<Note>
+  Database sync happens automatically after successful file sync. You don't need to trigger it manually.
+</Note>
+
+## Sync Workflows
+
+### Daily Sync Routine
+
+```bash
+# Morning: sync before starting work
+bm cloud bisync --name research
+
+# Work on files locally...
+
+# Evening: sync before logging off
+bm cloud bisync --name research
+```
+
+### Multi-Device Workflow
+
+**On Device A:**
+```bash
+# Sync at end of work session
+bm cloud bisync --name research
+```
+
+**On Device B:**
+```bash
+# Sync before starting work session
+bm cloud bisync --name research
+
+# Work on files...
+
+# Sync when done
+bm cloud bisync --name research
+```
+
+### Pre-Deployment Sync
+
+Before deploying changes or major edits:
+
+```bash
+# Create snapshot for safety
+bm cloud snapshot create "before major refactor"
+
+# Ensure everything is synced
+bm cloud bisync --name research
+
+# Verify integrity
+bm cloud check --name research
+```
+
+## Troubleshooting
+
+### Sync Fails: rclone Not Found
+
+```bash
+# Run setup again to install rclone
+bm cloud setup
+```
+
+### Sync Fails: Credentials Invalid
+
+```bash
+# Check cloud auth status
+bm cloud status
+
+# Re-login if needed
+bm cloud login
+
+# Regenerate sync credentials
+bm cloud setup
+```
+
+### Sync Fails: Permission Denied
+
+```bash
+# Check local directory permissions
+ls -la ~/Documents/research
+
+# Ensure you own the directory
+sudo chown -R $USER ~/Documents/research
+```
+
+### Sync Fails: Path Not Found
+
+```bash
+# Verify project sync configuration
+bm project list
+
+# Reconfigure sync path if needed
+bm cloud sync-setup research ~/Documents/research
+```
+
+### Files Not Syncing
+
+1. Check if files are ignored:
+   ```bash
+   cat ~/.basic-memory/.bmignore
+   ```
+
+2. Run sync with verbose output:
+   ```bash
+   bm cloud bisync --name research --verbose
+   ```
+
+3. Verify files exist locally:
+   ```bash
+   ls -la ~/Documents/research
+   ```
+
+### Persistent Conflicts
+
+If conflicts won't resolve:
+
+```bash
+# Reset bisync state
+bm cloud bisync-reset research
+
+# Review what will change
+bm cloud bisync --name research --resync --dry-run
+
+# Establish fresh baseline
+bm cloud bisync --name research --resync
+```
+
+## Performance Optimization
+
+### Large Projects
+
+For projects with many files:
+
+- **Use ignore patterns** to exclude unnecessary files
+- **Sync regularly** for smaller incremental updates
+- **Enable verbose output** only when debugging
+- **Consider multiple smaller projects** instead of one giant project
+
+### Network Optimization
+
+- **Sync during off-peak hours** for large transfers
+- **Use wired connection** for initial resync
+- **Monitor bandwidth** with `--verbose` flag
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Management" icon="folder" href="/cloud/projects">
+    Advanced cloud project configuration
+  </Card>
+  
+  <Card title="Snapshots" icon="camera" href="/cloud/overview#snapshot-management">
+    Create and restore from snapshots
+  </Card>
+  
+  <Card title="Authentication" icon="key" href="/cloud/authentication">
+    Manage cloud credentials
+  </Card>
+</CardGroup>

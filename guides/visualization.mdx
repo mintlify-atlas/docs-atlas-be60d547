@@ -1,0 +1,710 @@
+---
+title: 'Creating Visualizations'
+description: 'Build visual knowledge maps with Obsidian canvas'
+icon: 'diagram-project'
+---
+
+## Overview
+
+Basic Memory can create visual representations of your knowledge graph using Obsidian canvas files. These visualizations help you:
+
+- See relationships between concepts
+- Understand knowledge structure
+- Present ideas visually
+- Plan projects and workflows
+- Document architectures
+
+## Canvas Format
+
+Basic Memory uses the [JSON Canvas 1.0 specification](https://jsoncanvas.org/), an open format created by Obsidian. Canvas files (`.canvas`) are JSON files that define:
+
+- **Nodes** - Visual elements representing content
+- **Edges** - Connections between nodes
+- **Layout** - Positioning and styling
+
+## Creating a Canvas
+
+Use the `canvas` tool to create visualizations:
+
+```python
+canvas(
+    nodes=[...],
+    edges=[...],
+    title="My Canvas",
+    directory="diagrams"
+)
+```
+
+## Node Types
+
+Canvas supports four node types:
+
+<Tabs>
+  <Tab title="File Nodes">
+    Reference existing notes:
+    
+    ```python
+    {
+        "id": "node1",
+        "type": "file",
+        "file": "notes/authentication.md",
+        "x": 0,
+        "y": 0,
+        "width": 400,
+        "height": 300
+    }
+    ```
+    
+    **Key points:**
+    - `file` must reference an existing file path
+    - Path is relative to project root
+    - Obsidian will show file preview
+  </Tab>
+  
+  <Tab title="Text Nodes">
+    Add standalone text:
+    
+    ```python
+    {
+        "id": "node2",
+        "type": "text",
+        "text": "This is a text node with **markdown**",
+        "x": 450,
+        "y": 0,
+        "width": 250,
+        "height": 150
+    }
+    ```
+    
+    **Key points:**
+    - Supports Markdown formatting
+    - Good for labels and annotations
+    - Doesn't require an existing file
+  </Tab>
+  
+  <Tab title="Link Nodes">
+    Embed web content:
+    
+    ```python
+    {
+        "id": "node3",
+        "type": "link",
+        "url": "https://example.com",
+        "x": 750,
+        "y": 0,
+        "width": 400,
+        "height": 300
+    }
+    ```
+    
+    **Key points:**
+    - Embeds web pages in canvas
+    - Useful for external references
+    - Requires valid URL
+  </Tab>
+  
+  <Tab title="Group Nodes">
+    Organize related nodes:
+    
+    ```python
+    {
+        "id": "group1",
+        "type": "group",
+        "label": "Core Components",
+        "x": -50,
+        "y": -50,
+        "width": 1200,
+        "height": 400
+    }
+    ```
+    
+    **Key points:**
+    - Visual container for nodes
+    - Add label for clarity
+    - Position behind other nodes
+  </Tab>
+</Tabs>
+
+## Edges
+
+Edges connect nodes to show relationships:
+
+```python
+{
+    "id": "edge1",
+    "fromNode": "node1",
+    "toNode": "node2",
+    "label": "implements"
+}
+```
+
+### Edge Properties
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the edge
+</ParamField>
+
+<ParamField path="fromNode" type="string" required>
+  ID of the source node
+</ParamField>
+
+<ParamField path="toNode" type="string" required>
+  ID of the target node
+</ParamField>
+
+<ParamField path="label" type="string">
+  Optional label to describe the relationship
+</ParamField>
+
+<ParamField path="color" type="string">
+  Color as hex code (e.g., `"#FF0000"`) or preset (`"1"` through `"6"`)
+</ParamField>
+
+## Styling
+
+### Node Colors
+
+Style nodes with colors:
+
+```python
+{
+    "id": "node1",
+    "type": "text",
+    "text": "Important",
+    "color": "1",  # Red
+    "x": 0,
+    "y": 0,
+    "width": 200,
+    "height": 100
+}
+```
+
+**Color presets:**
+- `"1"` - Red
+- `"2"` - Orange  
+- `"3"` - Yellow
+- `"4"` - Green
+- `"5"` - Cyan
+- `"6"` - Purple
+
+Or use hex colors: `"#FF5733"`
+
+### Edge Colors
+
+Style connections:
+
+```python
+{
+    "id": "edge1",
+    "fromNode": "node1",
+    "toNode": "node2",
+    "color": "3",  # Yellow
+    "label": "depends on"
+}
+```
+
+## Layout Strategies
+
+### Hierarchical Layout
+
+Top-down or left-right hierarchy:
+
+```python
+nodes = [
+    # Top level
+    {"id": "root", "x": 400, "y": 0, ...},
+    
+    # Second level
+    {"id": "child1", "x": 100, "y": 200, ...},
+    {"id": "child2", "x": 400, "y": 200, ...},
+    {"id": "child3", "x": 700, "y": 200, ...},
+    
+    # Third level
+    {"id": "leaf1", "x": 100, "y": 400, ...},
+    {"id": "leaf2", "x": 400, "y": 400, ...},
+]
+```
+
+### Network Layout
+
+Central hub with connections:
+
+```python
+import math
+
+# Center node
+nodes = [{"id": "center", "x": 500, "y": 500, ...}]
+
+# Surrounding nodes in circle
+for i in range(6):
+    angle = (2 * math.pi * i) / 6
+    nodes.append({
+        "id": f"node{i}",
+        "x": 500 + 300 * math.cos(angle),
+        "y": 500 + 300 * math.sin(angle),
+        ...
+    })
+```
+
+### Grid Layout
+
+Organized in rows and columns:
+
+```python
+row_height = 250
+col_width = 350
+
+nodes = []
+for row in range(3):
+    for col in range(4):
+        nodes.append({
+            "id": f"node_{row}_{col}",
+            "x": col * col_width,
+            "y": row * row_height,
+            "width": 300,
+            "height": 200,
+            ...
+        })
+```
+
+## Example Canvases
+
+### System Architecture
+
+```python
+canvas(
+    nodes=[
+        # Frontend
+        {
+            "id": "frontend",
+            "type": "file",
+            "file": "docs/frontend-architecture.md",
+            "x": 0,
+            "y": 0,
+            "width": 400,
+            "height": 300,
+            "color": "4"
+        },
+        # API
+        {
+            "id": "api",
+            "type": "file",
+            "file": "docs/api-design.md",
+            "x": 450,
+            "y": 0,
+            "width": 400,
+            "height": 300,
+            "color": "5"
+        },
+        # Database
+        {
+            "id": "database",
+            "type": "file",
+            "file": "docs/database-schema.md",
+            "x": 900,
+            "y": 0,
+            "width": 400,
+            "height": 300,
+            "color": "6"
+        },
+    ],
+    edges=[
+        {
+            "id": "e1",
+            "fromNode": "frontend",
+            "toNode": "api",
+            "label": "calls"
+        },
+        {
+            "id": "e2",
+            "fromNode": "api",
+            "toNode": "database",
+            "label": "queries"
+        },
+    ],
+    title="System Architecture",
+    directory="diagrams"
+)
+```
+
+### Project Roadmap
+
+```python
+canvas(
+    nodes=[
+        # Phases
+        {
+            "id": "phase1",
+            "type": "text",
+            "text": "## Phase 1: Foundation\n- Setup\n- Basic features",
+            "x": 0,
+            "y": 0,
+            "width": 300,
+            "height": 200,
+            "color": "4"
+        },
+        {
+            "id": "phase2",
+            "type": "text",
+            "text": "## Phase 2: Enhancement\n- Advanced features\n- Optimization",
+            "x": 350,
+            "y": 0,
+            "width": 300,
+            "height": 200,
+            "color": "3"
+        },
+        {
+            "id": "phase3",
+            "type": "text",
+            "text": "## Phase 3: Launch\n- Testing\n- Deployment",
+            "x": 700,
+            "y": 0,
+            "width": 300,
+            "height": 200,
+            "color": "1"
+        },
+    ],
+    edges=[
+        {"id": "e1", "fromNode": "phase1", "toNode": "phase2"},
+        {"id": "e2", "fromNode": "phase2", "toNode": "phase3"},
+    ],
+    title="Project Roadmap",
+    directory="planning"
+)
+```
+
+### Concept Map
+
+```python
+canvas(
+    nodes=[
+        # Central concept
+        {
+            "id": "main",
+            "type": "file",
+            "file": "concepts/machine-learning.md",
+            "x": 400,
+            "y": 300,
+            "width": 400,
+            "height": 300,
+            "color": "6"
+        },
+        # Related concepts
+        {
+            "id": "supervised",
+            "type": "file",
+            "file": "concepts/supervised-learning.md",
+            "x": 0,
+            "y": 0,
+            "width": 350,
+            "height": 250
+        },
+        {
+            "id": "unsupervised",
+            "type": "file",
+            "file": "concepts/unsupervised-learning.md",
+            "x": 850,
+            "y": 0,
+            "width": 350,
+            "height": 250
+        },
+        {
+            "id": "reinforcement",
+            "type": "file",
+            "file": "concepts/reinforcement-learning.md",
+            "x": 425,
+            "y": 650,
+            "width": 350,
+            "height": 250
+        },
+    ],
+    edges=[
+        {
+            "id": "e1",
+            "fromNode": "main",
+            "toNode": "supervised",
+            "label": "includes"
+        },
+        {
+            "id": "e2",
+            "fromNode": "main",
+            "toNode": "unsupervised",
+            "label": "includes"
+        },
+        {
+            "id": "e3",
+            "fromNode": "main",
+            "toNode": "reinforcement",
+            "label": "includes"
+        },
+    ],
+    title="Machine Learning Concepts",
+    directory="concepts"
+)
+```
+
+## Working with Claude
+
+Ask Claude to create canvases naturally:
+
+### Architecture Visualization
+
+```
+You: Create a canvas showing our authentication system architecture.
+Include the frontend, API gateway, auth service, and database.
+Show the relationships between components.
+
+Claude: [Creates canvas with file nodes for each component and edges
+showing data flow]
+```
+
+### Project Planning
+
+```
+You: Make a visual roadmap for Q1 with three phases: foundation,
+enhancement, and launch. Show what depends on what.
+
+Claude: [Creates canvas with text nodes for phases and edges showing
+dependencies]
+```
+
+### Concept Exploration
+
+```
+You: Create a concept map for semantic search showing how it relates
+to embeddings, vector databases, and similarity search.
+
+Claude: [Creates canvas linking related concept notes]
+```
+
+## Viewing Canvases
+
+Canvas files are stored in your project directory and can be opened in:
+
+### Obsidian
+
+<Steps>
+  <Step title="Open in Obsidian">
+    Canvas files appear in the file explorer with a canvas icon
+  </Step>
+  
+  <Step title="Interactive Editing">
+    - Drag nodes to reposition
+    - Click edges to edit labels
+    - Add new nodes and connections
+    - Change colors and styling
+  </Step>
+  
+  <Step title="Pan and Zoom">
+    - Scroll to zoom
+    - Click and drag background to pan
+    - Fit to screen with toolbar button
+  </Step>
+</Steps>
+
+### As JSON
+
+Canvas files are plain JSON:
+
+```bash
+# View canvas file
+cat diagrams/architecture.canvas | jq
+
+# Edit with any text editor
+code diagrams/architecture.canvas
+```
+
+## Advanced Techniques
+
+### Dynamic Node IDs
+
+Generate IDs programmatically:
+
+```python
+import uuid
+
+nodes = [
+    {
+        "id": str(uuid.uuid4()),
+        "type": "text",
+        "text": f"Node {i}",
+        ...
+    }
+    for i in range(10)
+]
+```
+
+### Compute Layout Automatically
+
+Calculate positions based on relationships:
+
+```python
+def layout_tree(root, depth=0, offset_x=0):
+    """Layout nodes in a tree structure"""
+    nodes = [{
+        "id": root["id"],
+        "x": offset_x,
+        "y": depth * 250,
+        ...
+    }]
+    
+    child_width = 400
+    for i, child in enumerate(root.get("children", [])):
+        child_offset = offset_x + i * child_width
+        nodes.extend(layout_tree(child, depth + 1, child_offset))
+    
+    return nodes
+```
+
+### Generate from Knowledge Graph
+
+Create canvas from existing notes:
+
+```python
+# Get related notes
+context = build_context("memory://main-topic")
+
+# Convert to canvas nodes
+nodes = []
+for i, result in enumerate(context["results"]):
+    nodes.append({
+        "id": result["permalink"],
+        "type": "file",
+        "file": f"{result['permalink']}.md",
+        "x": (i % 3) * 400,
+        "y": (i // 3) * 300,
+        "width": 350,
+        "height": 250
+    })
+
+# Create edges from relations
+edges = []
+for result in context["results"]:
+    for relation in result.get("relations", []):
+        edges.append({
+            "id": f"{result['permalink']}-{relation['to']}",
+            "fromNode": result["permalink"],
+            "toNode": relation["to"],
+            "label": relation["type"]
+        })
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Plan before creating">
+    Sketch your layout before asking Claude:
+    
+    ```
+    "Create a canvas with:
+    - Main concept at center
+    - 4 related concepts around it
+    - Use file nodes for existing notes
+    - Color code by category"
+    ```
+  </Accordion>
+  
+  <Accordion title="Use consistent spacing">
+    Maintain readable layouts:
+    
+    ```python
+    # Good spacing
+    horizontal_gap = 50
+    vertical_gap = 50
+    node_width = 400
+    node_height = 300
+    
+    x = col * (node_width + horizontal_gap)
+    y = row * (node_height + vertical_gap)
+    ```
+  </Accordion>
+  
+  <Accordion title="Label edges meaningfully">
+    Use descriptive relationship labels:
+    
+    ```python
+    # Good
+    {"label": "implements"}
+    {"label": "depends on"}
+    {"label": "extends"}
+    
+    # Avoid
+    {"label": "related"}
+    {"label": "connected"}
+    ```
+  </Accordion>
+  
+  <Accordion title="Group related nodes">
+    Use group nodes for organization:
+    
+    ```python
+    # Create group first (lower z-index)
+    {"id": "group1", "type": "group", "label": "Frontend", ...}
+    
+    # Then add nodes within group bounds
+    {"id": "component1", "x": group_x + 20, ...}
+    ```
+  </Accordion>
+  
+  <Accordion title="Use colors purposefully">
+    Assign colors to indicate categories:
+    
+    ```python
+    # Define color scheme
+    COLORS = {
+        "frontend": "4",  # Green
+        "backend": "5",   # Cyan
+        "database": "6",  # Purple
+        "external": "2",  # Orange
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Canvas won't open in Obsidian">
+    1. Verify file has `.canvas` extension
+    2. Check JSON is valid: `cat file.canvas | jq`
+    3. Ensure file is in Obsidian vault directory
+  </Accordion>
+  
+  <Accordion title="File nodes show as broken">
+    1. Verify file path is correct and relative to project root
+    2. Check file exists: `ls notes/file.md`
+    3. Use exact path shown in Obsidian file explorer
+  </Accordion>
+  
+  <Accordion title="Nodes overlapping">
+    1. Increase spacing between nodes
+    2. Check x,y coordinates are unique
+    3. Consider different layout strategy
+  </Accordion>
+  
+  <Accordion title="Edges not showing">
+    1. Verify fromNode and toNode IDs exist
+    2. Check IDs match exactly (case-sensitive)
+    3. Ensure nodes have valid positions
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Notes" icon="pen" href="/guides/writing-notes">
+    Create notes to reference in canvases
+  </Card>
+  
+  <Card title="Building Context" icon="diagram-project" href="/guides/searching">
+    Navigate your knowledge graph
+  </Card>
+  
+  <Card title="JSON Canvas Spec" icon="file-code" href="https://jsoncanvas.org/">
+    Full canvas specification
+  </Card>
+  
+  <Card title="Canvas API" icon="code" href="/api/mcp/visualization">
+    Complete API documentation
+  </Card>
+</CardGroup>

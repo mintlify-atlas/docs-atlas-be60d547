@@ -1,0 +1,478 @@
+---
+title: Development
+description: Set up your development environment and contribute to Basic Memory
+---
+
+This guide covers setting up a development environment for Basic Memory and running tests.
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Python 3.12+" icon="python">
+    Basic Memory requires Python 3.12 or later
+  </Card>
+  <Card title="uv (recommended)" icon="rocket">
+    Fast Python package manager and project tool
+  </Card>
+  <Card title="just (optional)" icon="terminal">
+    Modern command runner for development tasks
+  </Card>
+  <Card title="Docker (optional)" icon="docker">
+    Required for PostgreSQL integration tests
+  </Card>
+</CardGroup>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/basicmachines-co/basic-memory.git
+    cd basic-memory
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    <Tabs>
+      <Tab title="Using just (recommended)">
+        ```bash
+        # Install just
+        brew install just  # macOS
+        cargo install just  # Cross-platform
+        
+        # Install dependencies
+        just install
+        ```
+      </Tab>
+      <Tab title="Using uv">
+        ```bash
+        # Install uv
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+        # Install dependencies
+        uv sync
+        ```
+      </Tab>
+      <Tab title="Using pip">
+        ```bash
+        # Create virtual environment
+        python3.12 -m venv .venv
+        source .venv/bin/activate
+        
+        # Install in development mode
+        pip install -e ".[dev]"
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Activate virtual environment">
+    ```bash
+    source .venv/bin/activate
+    ```
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    # Run tests
+    just test-unit-sqlite
+    
+    # Or manually
+    pytest tests/ -v
+    ```
+  </Step>
+</Steps>
+
+## Development Commands
+
+Basic Memory uses `just` as a command runner. View all available commands:
+
+```bash
+just --list
+```
+
+### Code Quality
+
+```bash
+# Lint and auto-fix
+just lint
+
+# Format code
+just format
+
+# Type checking (pyright)
+just typecheck
+
+# Type checking (ty - supplemental)
+just typecheck-ty
+
+# Run all quality checks
+just check
+```
+
+### Testing
+
+<Tabs>
+  <Tab title="Quick Tests">
+    ```bash
+    # Run all tests (SQLite + Postgres)
+    just test
+    
+    # SQLite only (fast)
+    just test-sqlite
+    
+    # Unit tests only
+    just test-unit-sqlite
+    
+    # Integration tests only
+    just test-int-sqlite
+    ```
+  </Tab>
+  <Tab title="PostgreSQL Tests">
+    ```bash
+    # All tests with Postgres (uses Docker)
+    just test-postgres
+    
+    # Unit tests with Postgres
+    just test-unit-postgres
+    
+    # Integration tests with Postgres
+    just test-int-postgres
+    ```
+  </Tab>
+  <Tab title="Selective Tests">
+    ```bash
+    # Changed files only (pytest-testmon)
+    just testmon
+    
+    # Fast smoke test (MCP end-to-end)
+    just test-smoke
+    
+    # Windows-specific tests
+    just test-windows
+    
+    # Performance benchmarks
+    just test-benchmark
+    
+    # Semantic search tests
+    just test-semantic
+    ```
+  </Tab>
+  <Tab title="Coverage">
+    ```bash
+    # Generate HTML coverage report
+    just coverage
+    
+    # View report
+    open htmlcov/index.html
+    ```
+  </Tab>
+</Tabs>
+
+### Fast Development Loop
+
+```bash
+# Fix, format, typecheck, test changed files, smoke test
+just fast-check
+```
+
+This runs:
+1. `just fix` - Auto-fix linting issues
+2. `just format` - Format code with ruff
+3. `just typecheck` - Type check with pyright
+4. `just testmon` - Test only changed files
+5. `just test-smoke` - Fast MCP integration test
+
+## Database Migrations
+
+Create a new database migration:
+
+```bash
+just migration "Add new feature"
+```
+
+This creates a new Alembic migration file in `src/basic_memory/alembic/versions/`.
+
+Migrations run automatically on startup:
+
+```bash
+bm status  # Triggers migration check
+```
+
+## Testing Architecture
+
+### Test Structure
+
+Basic Memory has two test directories:
+
+<Tabs>
+  <Tab title="tests/ (Unit)">
+    **Unit tests** - Fast, isolated, mocked
+    
+    ```
+    tests/
+    ├── test_config.py
+    ├── test_entity_repository.py
+    ├── test_markdown_parser.py
+    └── ...
+    ```
+    
+    **Characteristics**:
+    - Test individual functions/classes
+    - Use mocks for dependencies
+    - Fast execution (< 1 second per test)
+    - Run with: `just test-unit-sqlite`
+  </Tab>
+  <Tab title="test-int/ (Integration)">
+    **Integration tests** - Real workflows, no mocks
+    
+    ```
+    test-int/
+    ├── mcp/
+    ├── sync/
+    ├── semantic/
+    └── test_sync_performance_benchmark.py
+    ```
+    
+    **Characteristics**:
+    - Test complete workflows
+    - Real database and file operations
+    - Slower execution (1-5 seconds per test)
+    - Run with: `just test-int-sqlite`
+  </Tab>
+</Tabs>
+
+### Dual Backend Testing
+
+All tests run against both SQLite and PostgreSQL:
+
+```bash
+# SQLite tests (fast, no Docker)
+just test-sqlite
+
+# PostgreSQL tests (uses testcontainers)
+just test-postgres
+
+# Run both
+just test
+```
+
+<Info>
+PostgreSQL tests use [testcontainers](https://testcontainers-python.readthedocs.io/) to automatically spin up a PostgreSQL container. Docker must be running.
+</Info>
+
+### Test Markers
+
+Tests use pytest markers for selective execution:
+
+```python
+@pytest.mark.benchmark  # Performance benchmarks
+@pytest.mark.slow       # Slow-running tests (> 5 seconds)
+@pytest.mark.postgres   # PostgreSQL-specific tests
+@pytest.mark.windows    # Windows-specific tests
+@pytest.mark.smoke      # Fast MCP smoke tests
+@pytest.mark.semantic   # Semantic search tests
+```
+
+Run specific markers:
+
+```bash
+# Exclude benchmarks
+pytest -m "not benchmark"
+
+# Run only smoke tests
+pytest -m smoke
+
+# Run semantic search tests
+pytest -m semantic
+```
+
+## Code Style Guidelines
+
+<AccordionGroup>
+  <Accordion title="Python Version">
+    **Python 3.12+** required for:
+    - Type parameter syntax (`def func[T](...)`)
+    - Type aliases (`type MyType = str | int`)
+  </Accordion>
+  
+  <Accordion title="Formatting">
+    - **Line length**: 100 characters max
+    - **Tool**: ruff (replaces black, isort, flake8)
+    - **Import order**: standard lib → third-party → local
+  </Accordion>
+  
+  <Accordion title="Naming Conventions">
+    - **Functions/variables**: `snake_case`
+    - **Classes**: `PascalCase`
+    - **Constants**: `UPPER_SNAKE_CASE`
+    - **Private members**: `_leading_underscore`
+  </Accordion>
+  
+  <Accordion title="Type Annotations">
+    - **Required** for all public functions
+    - Use modern syntax: `list[str]` not `List[str]`
+    - Use `| None` not `Optional[T]`
+    - Document complex types with type aliases
+  </Accordion>
+  
+  <Accordion title="Async Patterns">
+    - Prefer async/await throughout
+    - Use SQLAlchemy 2.0 async ORM
+    - Use `aiofiles` for file I/O
+    - Use `asyncpg` for PostgreSQL
+  </Accordion>
+</AccordionGroup>
+
+## Debugging
+
+### Logging
+
+Basic Memory uses [Loguru](https://github.com/Delgan/loguru) for logging:
+
+```bash
+# Set log level
+export BASIC_MEMORY_LOG_LEVEL=DEBUG
+
+# View logs
+tail -f ~/.basic-memory/basic-memory.log
+```
+
+### MCP Inspector
+
+Test MCP tools interactively:
+
+```bash
+just run-inspector
+```
+
+This starts the MCP Inspector UI for testing tools.
+
+### Doctor Command
+
+Check file ↔ database consistency:
+
+```bash
+# Run in temp environment (safe)
+just doctor
+
+# Run on actual project
+bm doctor
+```
+
+## Continuous Integration
+
+CI runs on GitHub Actions:
+
+```yaml
+# .github/workflows/test.yml
+jobs:
+  test-sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - run: just test-sqlite
+  
+  test-postgres:
+    runs-on: ubuntu-latest
+    steps:
+      - run: just test-postgres
+```
+
+**Requirements for CI to pass**:
+
+- ✅ All tests pass (SQLite and Postgres)
+- ✅ Linting passes (`just lint`)
+- ✅ Type checking passes (`just typecheck`)
+- ✅ Code coverage ≥ target threshold
+
+## Contributing Workflow
+
+<Steps>
+  <Step title="Fork and clone">
+    Fork the repository on GitHub and clone your fork
+  </Step>
+  
+  <Step title="Create a branch">
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+  </Step>
+  
+  <Step title="Make changes">
+    Implement your feature with tests and documentation
+  </Step>
+  
+  <Step title="Run quality checks">
+    ```bash
+    just check
+    ```
+  </Step>
+  
+  <Step title="Commit with sign-off">
+    ```bash
+    git commit -s -m "Add new feature"
+    ```
+    
+    The `-s` flag signs off on the Developer Certificate of Origin
+  </Step>
+  
+  <Step title="Push and create PR">
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+    
+    Then create a pull request on GitHub
+  </Step>
+</Steps>
+
+## Release Process
+
+Basic Memory uses automatic versioning with `uv-dynamic-versioning`:
+
+<Tabs>
+  <Tab title="Development Builds">
+    Published automatically on every commit to `main`:
+    
+    ```bash
+    # Version format: 0.12.4.dev26+468a22f
+    pip install basic-memory --pre --force-reinstall
+    ```
+  </Tab>
+  <Tab title="Beta Releases">
+    Create a beta tag:
+    
+    ```bash
+    git tag v0.15.0b1
+    git push origin v0.15.0b1
+    ```
+    
+    GitHub Actions publishes to PyPI as pre-release
+  </Tab>
+  <Tab title="Stable Releases">
+    Create a version tag:
+    
+    ```bash
+    git tag v0.15.0
+    git push origin v0.15.0
+    ```
+    
+    GitHub Actions creates release and publishes to PyPI
+  </Tab>
+</Tabs>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/advanced/architecture">
+    Learn about the system architecture
+  </Card>
+  <Card title="Contributing Guide" icon="code-pull-request" href="/advanced/contributing">
+    Full contributing guidelines
+  </Card>
+  <Card title="GitHub Repository" icon="github" href="https://github.com/basicmachines-co/basic-memory">
+    View source code and issues
+  </Card>
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/tyvKNccgqN">
+    Get help and discuss development
+  </Card>
+</CardGroup>

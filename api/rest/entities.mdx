@@ -1,0 +1,510 @@
+---
+title: Entity API
+description: CRUD operations for knowledge entities in your Basic Memory graph
+---
+
+Entities are the core nodes in your knowledge graph. Each entity represents a concept, document, or piece of information stored as a markdown file.
+
+## Resolve Entity Identifier
+
+Resolve a string identifier (external_id, permalink, title, or path) to entity info.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/{project_id}/knowledge/resolve \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "identifier": "specs/search",
+    "strict": false
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/resolve",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "identifier": "specs/search",
+            "strict": False
+        }
+    )
+    entity = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="identifier" type="string" required>
+  The identifier to resolve (external_id, permalink, title, or file path)
+</ParamField>
+
+<ParamField body="source_path" type="string">
+  Optional source path for context-aware resolution (prefers notes closer to source)
+</ParamField>
+
+<ParamField body="strict" type="boolean" default="false">
+  If true, disables fuzzy search fallback and requires exact match
+</ParamField>
+
+### Response
+
+<ResponseField name="external_id" type="string">
+  Entity external UUID (stable identifier)
+</ResponseField>
+
+<ResponseField name="entity_id" type="integer">
+  Internal entity ID
+</ResponseField>
+
+<ResponseField name="permalink" type="string">
+  Entity permalink
+</ResponseField>
+
+<ResponseField name="file_path" type="string">
+  File path relative to project root
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Entity title
+</ResponseField>
+
+<ResponseField name="resolution_method" type="string">
+  How the entity was resolved: `external_id`, `permalink`, `title`, `path`, or `search`
+</ResponseField>
+
+## Get Entity by ID
+
+Retrieve a complete entity by its external UUID.
+
+<CodeGroup>
+```bash cURL
+curl https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.get(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id}",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    entity = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="project_id" type="string" required>
+  Project external UUID
+</ParamField>
+
+<ParamField path="entity_id" type="string" required>
+  Entity external UUID
+</ParamField>
+
+### Response
+
+<ResponseField name="external_id" type="string">
+  Entity external UUID
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Entity title
+</ResponseField>
+
+<ResponseField name="permalink" type="string">
+  URL-friendly identifier
+</ResponseField>
+
+<ResponseField name="file_path" type="string">
+  File path relative to project root
+</ResponseField>
+
+<ResponseField name="note_type" type="string">
+  Entity classification (e.g., "note", "person", "spec")
+</ResponseField>
+
+<ResponseField name="content_type" type="string">
+  MIME type (e.g., "text/markdown", "image/png")
+</ResponseField>
+
+<ResponseField name="content" type="string">
+  File content (for text files)
+</ResponseField>
+
+<ResponseField name="observations" type="array">
+  List of observations (facts) about this entity
+</ResponseField>
+
+<ResponseField name="relations" type="array">
+  List of relations to other entities
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+## Create Entity
+
+Create a new entity in the knowledge graph.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My New Note",
+    "directory": "notes",
+    "note_type": "note",
+    "content": "# My New Note\n\nThis is the content."
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "title": "My New Note",
+            "directory": "notes",
+            "note_type": "note",
+            "content": "# My New Note\n\nThis is the content."
+        }
+    )
+    entity = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="title" type="string" required>
+  Entity title (becomes filename)
+</ParamField>
+
+<ParamField body="directory" type="string" required>
+  Directory path relative to project root
+</ParamField>
+
+<ParamField body="note_type" type="string" default="note">
+  Entity classification (converted to snake_case)
+</ParamField>
+
+<ParamField body="content" type="string">
+  File content (markdown for text files)
+</ParamField>
+
+<ParamField body="content_type" type="string" default="text/markdown">
+  MIME type of content
+</ParamField>
+
+<ParamField body="entity_metadata" type="object">
+  Optional metadata dictionary
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="fast" type="boolean" default="true">
+  If true, defers indexing to background tasks for faster response
+</ParamField>
+
+### Response
+
+Returns the created entity with HTTP status `201 Created`.
+
+<ResponseField name="external_id" type="string">
+  Generated UUID for the new entity
+</ResponseField>
+
+<ResponseField name="permalink" type="string">
+  Generated permalink
+</ResponseField>
+
+See [Get Entity](#get-entity-by-id) for full response schema.
+
+## Update Entity
+
+Update an existing entity by external UUID (upsert behavior).
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id} \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Updated Title",
+    "directory": "notes",
+    "note_type": "note",
+    "content": "# Updated Title\n\nUpdated content."
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.put(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "title": "Updated Title",
+            "directory": "notes",
+            "note_type": "note",
+            "content": "# Updated Title\n\nUpdated content."
+        }
+    )
+    entity = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="entity_id" type="string" required>
+  Entity external UUID
+</ParamField>
+
+### Request Body
+
+Same as [Create Entity](#create-entity) request body.
+
+### Query Parameters
+
+<ParamField query="fast" type="boolean" default="true">
+  If true, defers indexing to background tasks
+</ParamField>
+
+### Response
+
+Returns HTTP status `200 OK` if entity was updated, or `201 Created` if entity was created.
+
+## Edit Entity
+
+Edit an existing entity using operations like append, prepend, or find/replace.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id} \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "append",
+    "content": "\n\nNew content to append."
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.patch(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "operation": "append",
+            "content": "\n\nNew content to append."
+        }
+    )
+    entity = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="operation" type="string" required>
+  Edit operation: `append`, `prepend`, `find_replace`, or `replace_section`
+</ParamField>
+
+<ParamField body="content" type="string" required>
+  Content to insert or replace with
+</ParamField>
+
+<ParamField body="section" type="string">
+  Section name for `replace_section` operation
+</ParamField>
+
+<ParamField body="find_text" type="string">
+  Text to find for `find_replace` operation
+</ParamField>
+
+<ParamField body="expected_replacements" type="integer" default="1">
+  Expected number of replacements for `find_replace` (validation)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="fast" type="boolean" default="true">
+  If true, defers indexing to background tasks
+</ParamField>
+
+### Response
+
+Returns the updated entity.
+
+## Delete Entity
+
+Delete an entity by external UUID.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.delete(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id}",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="deleted" type="boolean">
+  True if entity was deleted, false if entity didn't exist (idempotent)
+</ResponseField>
+
+## Move Entity
+
+Move an entity to a new file location.
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id}/move \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destination_path": "archive/old-note.md"
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.put(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/knowledge/entities/{entity_id}/move",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"destination_path": "archive/old-note.md"}
+    )
+    entity = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="destination_path" type="string" required>
+  New file path relative to project root
+</ParamField>
+
+### Response
+
+Returns the updated entity with new file path. The external_id remains stable.
+
+## Move Directory
+
+Move all entities in a directory to a new location.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/{project_id}/knowledge/move-directory \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_directory": "drafts",
+    "destination_directory": "archive/2026"
+  }'
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="source_directory" type="string" required>
+  Source directory path
+</ParamField>
+
+<ParamField body="destination_directory" type="string" required>
+  Destination directory path
+</ParamField>
+
+### Response
+
+<ResponseField name="total_files" type="integer">
+  Total number of files in source directory
+</ResponseField>
+
+<ResponseField name="successful_moves" type="integer">
+  Number of files successfully moved
+</ResponseField>
+
+<ResponseField name="failed_moves" type="integer">
+  Number of files that failed to move
+</ResponseField>
+
+<ResponseField name="moved_files" type="array">
+  List of file paths that were moved
+</ResponseField>
+
+<ResponseField name="errors" type="array">
+  List of errors for failed moves
+</ResponseField>
+
+## Delete Directory
+
+Delete all entities in a directory.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/{project_id}/knowledge/delete-directory \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "directory": "archive/old"
+  }'
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="directory" type="string" required>
+  Directory path to delete
+</ParamField>
+
+### Response
+
+<ResponseField name="total_files" type="integer">
+  Total number of files in directory
+</ResponseField>
+
+<ResponseField name="successful_deletes" type="integer">
+  Number of files successfully deleted
+</ResponseField>
+
+<ResponseField name="failed_deletes" type="integer">
+  Number of files that failed to delete
+</ResponseField>
+
+<ResponseField name="deleted_files" type="array">
+  List of file paths that were deleted
+</ResponseField>
+
+<ResponseField name="errors" type="array">
+  List of errors for failed deletes
+</ResponseField>

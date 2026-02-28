@@ -1,0 +1,520 @@
+---
+title: Projects API
+description: Manage multiple Basic Memory projects via REST API
+---
+
+The Projects API allows you to manage multiple knowledge graph projects, each with its own entities, search index, and configuration.
+
+## List Projects
+
+Retrieve all configured projects.
+
+<CodeGroup>
+```bash cURL
+curl https://api.basicmemory.com/v2/projects/ \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.get(
+        "https://api.basicmemory.com/v2/projects/",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    projects = response.json()
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="projects" type="array">
+  Array of project objects
+  
+  <Expandable title="Project Object">
+    <ResponseField name="id" type="integer">
+      Internal project ID
+    </ResponseField>
+    
+    <ResponseField name="external_id" type="string">
+      Project external UUID (stable identifier)
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Project name
+    </ResponseField>
+    
+    <ResponseField name="path" type="string">
+      Absolute path to project directory
+    </ResponseField>
+    
+    <ResponseField name="is_default" type="boolean">
+      Whether this is the default project
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="default_project" type="string">
+  Name of the default project
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "projects": [
+    {
+      "id": 1,
+      "external_id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "personal",
+      "path": "/Users/username/Notes",
+      "is_default": true
+    },
+    {
+      "id": 2,
+      "external_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "name": "work",
+      "path": "/Users/username/Work/Notes",
+      "is_default": false
+    }
+  ],
+  "default_project": "personal"
+}
+```
+
+## Get Project by ID
+
+Retrieve a specific project by its external UUID.
+
+<CodeGroup>
+```bash cURL
+curl https://api.basicmemory.com/v2/projects/{project_id} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.get(
+        f"https://api.basicmemory.com/v2/projects/{project_id}",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    project = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="project_id" type="string" required>
+  Project external UUID
+</ParamField>
+
+### Response
+
+Returns a single project object (see [List Projects](#list-projects) for schema).
+
+## Resolve Project Identifier
+
+Resolve a project identifier (name, permalink, or external_id) to project info.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/resolve \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "personal"}'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        "https://api.basicmemory.com/v2/projects/resolve",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"identifier": "personal"}
+    )
+    project = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="identifier" type="string" required>
+  Project name, permalink, or external UUID to resolve
+</ParamField>
+
+### Response
+
+<ResponseField name="external_id" type="string">
+  Project external UUID
+</ResponseField>
+
+<ResponseField name="project_id" type="integer">
+  Internal project ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Project name
+</ResponseField>
+
+<ResponseField name="permalink" type="string">
+  Project permalink (kebab-case name)
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Absolute path to project directory
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  Whether project is active
+</ResponseField>
+
+<ResponseField name="is_default" type="boolean">
+  Whether this is the default project
+</ResponseField>
+
+<ResponseField name="resolution_method" type="string">
+  How the project was resolved: `external_id`, `permalink`, or `name`
+</ResponseField>
+
+## Add Project
+
+Add a new project to the configuration.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/ \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "research",
+    "path": "/Users/username/Research",
+    "set_default": false
+  }'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        "https://api.basicmemory.com/v2/projects/",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "name": "research",
+            "path": "/Users/username/Research",
+            "set_default": False
+        }
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Project name (must be unique)
+</ParamField>
+
+<ParamField body="path" type="string" required>
+  Absolute path to project directory
+</ParamField>
+
+<ParamField body="set_default" type="boolean" default="false">
+  Whether to set this as the default project
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Always "success"
+</ResponseField>
+
+<ResponseField name="default" type="boolean">
+  Whether this project is now the default
+</ResponseField>
+
+<ResponseField name="new_project" type="object">
+  The created project object
+</ResponseField>
+
+## Update Project
+
+Update a project's path or active status.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH https://api.basicmemory.com/v2/projects/{project_id} \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/Users/username/NewPath"}'
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.patch(
+        f"https://api.basicmemory.com/v2/projects/{project_id}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"path": "/Users/username/NewPath"}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="path" type="string">
+  New absolute path for the project
+</ParamField>
+
+<ParamField body="is_active" type="boolean">
+  Active status of the project
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Always "success"
+</ResponseField>
+
+<ResponseField name="old_project" type="object">
+  Project state before update
+</ResponseField>
+
+<ResponseField name="new_project" type="object">
+  Project state after update
+</ResponseField>
+
+## Delete Project
+
+Delete a project from the configuration.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://api.basicmemory.com/v2/projects/{project_id}?delete_notes=false" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.delete(
+        f"https://api.basicmemory.com/v2/projects/{project_id}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        params={"delete_notes": False}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="delete_notes" type="boolean" default="false">
+  If true, also delete the project directory from the filesystem
+</ParamField>
+
+<Warning>
+  Setting `delete_notes=true` permanently deletes all files in the project directory. This cannot be undone.
+</Warning>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Always "success"
+</ResponseField>
+
+<ResponseField name="old_project" type="object">
+  The deleted project object
+</ResponseField>
+
+## Set Default Project
+
+Set a project as the default.
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://api.basicmemory.com/v2/projects/{project_id}/default \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.put(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/default",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Always "success"
+</ResponseField>
+
+<ResponseField name="old_project" type="object">
+  Previously default project
+</ResponseField>
+
+<ResponseField name="new_project" type="object">
+  New default project
+</ResponseField>
+
+## Sync Project
+
+Force synchronization between filesystem and database.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.basicmemory.com/v2/projects/{project_id}/sync?force_full=false" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/sync",
+        headers={"Authorization": f"Bearer {api_key}"},
+        params={"force_full": False, "run_in_background": True}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="force_full" type="boolean" default="false">
+  Force full scan instead of incremental sync
+</ParamField>
+
+<ParamField query="run_in_background" type="boolean" default="true">
+  Run sync in background (returns immediately)
+</ParamField>
+
+### Response (Background)
+
+<ResponseField name="status" type="string">
+  "sync_started"
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Status message
+</ResponseField>
+
+### Response (Foreground)
+
+<ResponseField name="files_created" type="integer">
+  Number of new files indexed
+</ResponseField>
+
+<ResponseField name="files_updated" type="integer">
+  Number of updated files reindexed
+</ResponseField>
+
+<ResponseField name="files_deleted" type="integer">
+  Number of deleted files removed from index
+</ResponseField>
+
+<ResponseField name="files_unchanged" type="integer">
+  Number of unchanged files skipped
+</ResponseField>
+
+<ResponseField name="total_time_seconds" type="number">
+  Total sync duration in seconds
+</ResponseField>
+
+## Get Project Status
+
+Get detailed sync status for a project (dry-run scan).
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.basicmemory.com/v2/projects/{project_id}/status?force_full=false" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"https://api.basicmemory.com/v2/projects/{project_id}/status",
+        headers={"Authorization": f"Bearer {api_key}"},
+        params={"force_full": False}
+    )
+    status = response.json()
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="force_full" type="boolean" default="false">
+  Force full scan instead of incremental check
+</ParamField>
+
+### Response
+
+Same as [Sync Project](#sync-project) foreground response.
+
+## Synchronize Configuration
+
+Sync projects between configuration file and database.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.basicmemory.com/v2/projects/config/sync \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```python Python
+import httpx
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        "https://api.basicmemory.com/v2/projects/config/sync",
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    result = response.json()
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Always "success"
+</ResponseField>
+
+<Note>
+  This endpoint is primarily used internally during startup and after configuration changes.
+</Note>

@@ -1,0 +1,755 @@
+---
+title: Installation
+description: Detailed installation instructions for Basic Memory
+---
+
+# Installation
+
+This guide covers everything you need to know about installing and configuring Basic Memory on different platforms.
+
+## System Requirements
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    Version 3.12 or higher required
+  </Card>
+  <Card title="Operating System" icon="computer">
+    macOS, Linux, or Windows
+  </Card>
+  <Card title="MCP Client" icon="desktop">
+    Claude Desktop, VS Code with MCP, or other MCP-compatible client
+  </Card>
+  <Card title="Disk Space" icon="hard-drive">
+    Minimal (~50MB for installation)
+  </Card>
+</CardGroup>
+
+<Warning>
+  Basic Memory requires Python 3.12+ due to modern type system features (`type` statement and type parameters). It will not work with earlier Python versions.
+</Warning>
+
+## Checking Your Python Version
+
+Before installing, verify your Python version:
+
+```bash
+python --version
+# or
+python3 --version
+```
+
+If you see a version lower than 3.12, you'll need to upgrade Python first:
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # Using Homebrew
+    brew install python@3.12
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    Download and install from [python.org/downloads](https://www.python.org/downloads/)
+  </Tab>
+  
+  <Tab title="Linux">
+    ```bash
+    # Ubuntu/Debian
+    sudo apt update
+    sudo apt install python3.12
+    
+    # Fedora
+    sudo dnf install python3.12
+    ```
+  </Tab>
+</Tabs>
+
+## Installation Methods
+
+### Method 1: Using uv (Recommended)
+
+`uv` is a fast Python package installer. It's the recommended method for installing Basic Memory.
+
+<Steps>
+  <Step title="Install uv (if not already installed)">
+    <Tabs>
+      <Tab title="macOS/Linux">
+        ```bash
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+      </Tab>
+      
+      <Tab title="Windows">
+        ```powershell
+        powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Install Basic Memory">
+    ```bash
+    uv tool install basic-memory
+    ```
+    
+    This installs Basic Memory as a standalone tool with its own isolated environment.
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    basic-memory --version
+    ```
+    
+    You should see output like: `basic-memory, version 0.15.0`
+  </Step>
+</Steps>
+
+<Tip>
+  With `uv`, you can also run Basic Memory without installing it using `uvx basic-memory [command]`.
+</Tip>
+
+### Method 2: Using pip
+
+If you prefer pip or don't want to install uv:
+
+<Steps>
+  <Step title="Install Basic Memory">
+    ```bash
+    pip install basic-memory
+    ```
+    
+    Or for a user-local installation (recommended):
+    ```bash
+    pip install --user basic-memory
+    ```
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    basic-memory --version
+    ```
+  </Step>
+</Steps>
+
+### Method 3: From Source (For Development)
+
+If you want to contribute or modify Basic Memory:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/basicmachines-co/basic-memory.git
+    cd basic-memory
+    ```
+  </Step>
+  
+  <Step title="Install with development dependencies">
+    ```bash
+    # Using uv (recommended)
+    uv sync
+    
+    # Or using pip
+    pip install -e ".[dev]"
+    ```
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    basic-memory --version
+    ```
+  </Step>
+</Steps>
+
+## Configuring MCP Clients
+
+Basic Memory works with any MCP-compatible client. Here's how to configure the most popular ones:
+
+### Claude Desktop
+
+Claude Desktop is the most popular MCP client for Basic Memory.
+
+<Steps>
+  <Step title="Locate the configuration file">
+    <Tabs>
+      <Tab title="macOS">
+        ```bash
+        ~/Library/Application Support/Claude/claude_desktop_config.json
+        ```
+      </Tab>
+      
+      <Tab title="Windows">
+        ```bash
+        %APPDATA%\Claude\claude_desktop_config.json
+        ```
+      </Tab>
+      
+      <Tab title="Linux">
+        ```bash
+        ~/.config/Claude/claude_desktop_config.json
+        ```
+      </Tab>
+    </Tabs>
+    
+    If the file doesn't exist, create it.
+  </Step>
+  
+  <Step title="Add Basic Memory configuration">
+    <Tabs>
+      <Tab title="Using uv (recommended)">
+        ```json
+        {
+          "mcpServers": {
+            "basic-memory": {
+              "command": "uvx",
+              "args": [
+                "basic-memory",
+                "mcp"
+              ]
+            }
+          }
+        }
+        ```
+      </Tab>
+      
+      <Tab title="Using pip">
+        ```json
+        {
+          "mcpServers": {
+            "basic-memory": {
+              "command": "basic-memory",
+              "args": [
+                "mcp"
+              ]
+            }
+          }
+        }
+        ```
+      </Tab>
+      
+      <Tab title="With custom project">
+        ```json
+        {
+          "mcpServers": {
+            "basic-memory": {
+              "command": "uvx",
+              "args": [
+                "basic-memory",
+                "mcp",
+                "--project",
+                "my-project-name"
+              ]
+            }
+          }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Restart Claude Desktop">
+    Close and reopen Claude Desktop completely for the changes to take effect.
+  </Step>
+  
+  <Step title="Verify MCP is working">
+    Look for a small hammer icon (🔨) in Claude Desktop. When you start typing prompts like "Create a note about...", Claude should be able to use Basic Memory tools.
+  </Step>
+</Steps>
+
+### VS Code
+
+For VS Code with MCP support:
+
+<Steps>
+  <Step title="Open VS Code User Settings (JSON)">
+    Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) and type:
+    ```
+    Preferences: Open User Settings (JSON)
+    ```
+  </Step>
+  
+  <Step title="Add Basic Memory configuration">
+    ```json
+    {
+      "mcp": {
+        "servers": {
+          "basic-memory": {
+            "command": "uvx",
+            "args": ["basic-memory", "mcp"]
+          }
+        }
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Alternative: Workspace configuration">
+    Create `.vscode/mcp.json` in your workspace:
+    
+    ```json
+    {
+      "servers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": ["basic-memory", "mcp"]
+        }
+      }
+    }
+    ```
+    
+    This allows sharing the configuration with your team.
+  </Step>
+</Steps>
+
+### Other MCP Clients
+
+For other MCP-compatible clients, the general pattern is:
+
+```json
+{
+  "command": "uvx",
+  "args": ["basic-memory", "mcp"]
+}
+```
+
+Refer to your client's documentation for specific configuration details.
+
+## Initial Setup
+
+After installation, initialize your Basic Memory project:
+
+<Steps>
+  <Step title="Check default project location">
+    By default, Basic Memory stores notes in `~/basic-memory/`:
+    
+    ```bash
+    basic-memory status
+    ```
+    
+    This creates the directory and database if they don't exist.
+  </Step>
+  
+  <Step title="(Optional) Create a custom project">
+    If you want to use a different location:
+    
+    ```bash
+    basic-memory project add my-project ~/Documents/my-knowledge-base
+    basic-memory project default my-project
+    ```
+  </Step>
+  
+  <Step title="Start sync service">
+    For real-time synchronization:
+    
+    ```bash
+    basic-memory sync --watch
+    ```
+    
+    Or run a one-time sync:
+    ```bash
+    basic-memory sync
+    ```
+  </Step>
+</Steps>
+
+## Configuration Options
+
+### Custom Project Directory
+
+To use a custom directory for your knowledge base:
+
+```bash
+# Add a new project
+basic-memory project add work ~/work-knowledge
+
+# Set it as default
+basic-memory project default work
+
+# Verify
+basic-memory project list
+```
+
+### Multiple Projects
+
+You can manage multiple knowledge bases:
+
+<CodeGroup>
+```bash List Projects
+basic-memory project list
+```
+
+```bash Add Project
+basic-memory project add research ~/Documents/research-notes
+```
+
+```bash Switch Default
+basic-memory project default research
+```
+
+```bash Use Specific Project in Claude
+# Edit claude_desktop_config.json
+{
+  "mcpServers": {
+    "basic-memory-research": {
+      "command": "uvx",
+      "args": ["basic-memory", "mcp", "--project", "research"]
+    },
+    "basic-memory-work": {
+      "command": "uvx",
+      "args": ["basic-memory", "mcp", "--project", "work"]
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Cloud Sync (Optional)
+
+Basic Memory Cloud provides cross-device synchronization:
+
+<Steps>
+  <Step title="Sign up for Basic Memory Cloud">
+    Visit [basicmemory.com](https://basicmemory.com) and sign up for an account.
+    
+    <Info>
+      Use code `BMFOSS` for 20% off for 3 months (OSS discount).
+    </Info>
+  </Step>
+  
+  <Step title="Authenticate">
+    ```bash
+    basic-memory cloud login
+    ```
+    
+    This opens your browser for OAuth authentication.
+  </Step>
+  
+  <Step title="Set up cloud sync">
+    ```bash
+    basic-memory cloud setup
+    ```
+    
+    This configures rclone for bidirectional sync.
+  </Step>
+  
+  <Step title="Enable cloud for a project">
+    ```bash
+    basic-memory project set-cloud my-project
+    ```
+  </Step>
+  
+  <Step title="Sync to cloud">
+    ```bash
+    # One-way sync (local → cloud)
+    basic-memory project sync
+    
+    # Bidirectional sync
+    basic-memory project bisync
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Cloud sync is completely optional. Basic Memory works perfectly as a local-only tool.
+</Note>
+
+## Importing Existing Data
+
+If you have existing notes or conversations, you can import them:
+
+### From Claude.ai
+
+<Steps>
+  <Step title="Export conversations from Claude.ai">
+    In Claude.ai, go to Settings → Export Data to download your conversations.
+  </Step>
+  
+  <Step title="Import to Basic Memory">
+    ```bash
+    basic-memory import claude conversations ~/Downloads/conversations.json
+    ```
+    
+    For projects:
+    ```bash
+    basic-memory import claude projects ~/Downloads/projects.json
+    ```
+  </Step>
+</Steps>
+
+### From ChatGPT
+
+<Steps>
+  <Step title="Export conversations from ChatGPT">
+    In ChatGPT Settings, use Data Export to download your conversations.
+  </Step>
+  
+  <Step title="Import to Basic Memory">
+    ```bash
+    basic-memory import chatgpt ~/Downloads/conversations.json
+    ```
+  </Step>
+</Steps>
+
+### From Memory JSON
+
+If you have data from another MCP memory server:
+
+```bash
+basic-memory import memory-json ~/path/to/memory.json
+```
+
+## Verification
+
+Verify your installation is working correctly:
+
+<Steps>
+  <Step title="Check version">
+    ```bash
+    basic-memory --version
+    ```
+  </Step>
+  
+  <Step title="Check status">
+    ```bash
+    basic-memory status
+    ```
+    
+    Should show your project directory and sync status.
+  </Step>
+  
+  <Step title="Test MCP in Claude">
+    Open Claude Desktop and try:
+    ```
+    Create a note about testing Basic Memory installation
+    ```
+    
+    If it works, you should see a new file in `~/basic-memory/`.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: basic-memory" icon="terminal">
+    **Problem:** The `basic-memory` command is not in your PATH.
+    
+    **Solutions:**
+    
+    1. If using `uv tool install`, ensure uv's bin directory is in your PATH:
+       ```bash
+       export PATH="$HOME/.local/bin:$PATH"
+       ```
+       Add this to your `~/.bashrc` or `~/.zshrc` to make it permanent.
+    
+    2. If using `pip install --user`, add the user bin directory:
+       ```bash
+       export PATH="$HOME/.local/bin:$PATH"
+       ```
+    
+    3. Use the full path:
+       ```bash
+       ~/.local/bin/basic-memory --version
+       ```
+  </Accordion>
+  
+  <Accordion title="Python version too old" icon="python">
+    **Problem:** Error message about Python version.
+    
+    **Solution:** Upgrade to Python 3.12 or higher:
+    
+    <Tabs>
+      <Tab title="macOS">
+        ```bash
+        brew install python@3.12
+        ```
+      </Tab>
+      
+      <Tab title="Linux">
+        ```bash
+        # Ubuntu/Debian
+        sudo apt install python3.12
+        
+        # Use update-alternatives to set default
+        sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+        ```
+      </Tab>
+      
+      <Tab title="Windows">
+        Download from [python.org/downloads](https://www.python.org/downloads/)
+      </Tab>
+    </Tabs>
+  </Accordion>
+  
+  <Accordion title="Claude Desktop doesn't show MCP tools" icon="desktop">
+    **Problem:** No hammer icon or MCP tools in Claude Desktop.
+    
+    **Solutions:**
+    
+    1. Verify config file location is correct for your OS
+    2. Check JSON syntax is valid (use a JSON validator)
+    3. Ensure you fully restarted Claude Desktop (not just closed the window)
+    4. Check Claude Desktop logs:
+       - macOS: `~/Library/Logs/Claude/`
+       - Windows: `%APPDATA%\Claude\logs\`
+    5. Test Basic Memory works directly:
+       ```bash
+       basic-memory --version
+       ```
+  </Accordion>
+  
+  <Accordion title="Permission denied errors" icon="lock">
+    **Problem:** Cannot write to the default directory.
+    
+    **Solution:** Check directory permissions:
+    ```bash
+    ls -la ~/basic-memory/
+    ```
+    
+    If needed, fix permissions:
+    ```bash
+    chmod 755 ~/basic-memory/
+    ```
+    
+    Or use a custom directory:
+    ```bash
+    basic-memory project add custom ~/Documents/knowledge
+    basic-memory project default custom
+    ```
+  </Accordion>
+  
+  <Accordion title="Sync issues" icon="rotate">
+    **Problem:** Files aren't syncing or showing errors.
+    
+    **Solutions:**
+    
+    1. Check sync status:
+       ```bash
+       basic-memory status
+       ```
+    
+    2. Run sync manually with verbose output:
+       ```bash
+       basic-memory sync --verbose
+       ```
+    
+    3. Check logs:
+       ```bash
+       cat ~/.basic-memory/basic-memory.log
+       ```
+    
+    4. Verify database integrity:
+       ```bash
+       basic-memory doctor
+       ```
+  </Accordion>
+  
+  <Accordion title="Cannot connect to cloud" icon="cloud">
+    **Problem:** Cloud authentication fails.
+    
+    **Solutions:**
+    
+    1. Check your internet connection
+    2. Verify your subscription is active at [basicmemory.com](https://basicmemory.com)
+    3. Try logging out and back in:
+       ```bash
+       basic-memory cloud logout
+       basic-memory cloud login
+       ```
+    4. Check cloud status:
+       ```bash
+       basic-memory cloud status
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Uninstallation
+
+If you need to uninstall Basic Memory:
+
+<Tabs>
+  <Tab title="Using uv">
+    ```bash
+    uv tool uninstall basic-memory
+    ```
+  </Tab>
+  
+  <Tab title="Using pip">
+    ```bash
+    pip uninstall basic-memory
+    ```
+  </Tab>
+</Tabs>
+
+To remove your data:
+
+```bash
+# Remove default project
+rm -rf ~/basic-memory/
+
+# Remove configuration
+rm -rf ~/.basic-memory/
+```
+
+<Warning>
+  This permanently deletes your knowledge base. Back up any important notes before uninstalling.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Create your first note and start building your knowledge base
+  </Card>
+  <Card
+    title="User Guide"
+    icon="book"
+    href="/guides/writing-notes"
+  >
+    Learn about Basic Memory's features in depth
+  </Card>
+  <Card
+    title="CLI Reference"
+    icon="terminal"
+    href="/api/cli/overview"
+  >
+    Complete command-line interface documentation
+  </Card>
+  <Card
+    title="Knowledge Format"
+    icon="file-code"
+    href="/concepts/knowledge-graph"
+  >
+    Understand the Markdown format for notes
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you run into issues:
+
+<CardGroup cols={3}>
+  <Card
+    title="Discord Community"
+    icon="discord"
+    href="https://discord.gg/tyvKNccgqN"
+  >
+    Ask questions and get help
+  </Card>
+  <Card
+    title="GitHub Issues"
+    icon="github"
+    href="https://github.com/basicmachines-co/basic-memory/issues"
+  >
+    Report bugs or request features
+  </Card>
+  <Card
+    title="Documentation"
+    icon="book"
+    href="https://docs.basicmemory.com"
+  >
+    Browse the full docs
+  </Card>
+</CardGroup>

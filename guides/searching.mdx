@@ -1,0 +1,672 @@
+---
+title: 'Searching and Discovery'
+description: 'Master search techniques to find information in your knowledge base'
+icon: 'magnifying-glass'
+---
+
+## Overview
+
+Basic Memory provides powerful search capabilities that help you find information quickly. You can search by:
+
+- Full-text content
+- Note titles
+- Permalinks and paths
+- Tags and metadata
+- Date ranges
+- Entity types
+
+## Basic Search
+
+The simplest way to search is with a text query:
+
+```
+search_notes("coffee brewing")
+```
+
+This searches across all content in your knowledge base, including:
+- Note titles
+- Observation content
+- Relation context
+- Frontmatter fields
+
+## Search Types
+
+Basic Memory supports several search modes:
+
+<Tabs>
+  <Tab title="Text Search (FTS)">
+    Full-text search using SQLite's FTS5 engine:
+    
+    ```python
+    search_notes("project planning", search_type="text")
+    ```
+    
+    **Features:**
+    - Fast searching across large knowledge bases
+    - Boolean operators (AND, OR, NOT)
+    - Phrase search with quotes
+    - Prefix matching
+    
+    **Best for:**
+    - General content search
+    - Boolean queries
+    - Performance-critical searches
+  </Tab>
+  
+  <Tab title="Semantic Search">
+    Meaning-based search using embeddings:
+    
+    ```python
+    search_notes("ideas about performance", search_type="semantic")
+    ```
+    
+    **Features:**
+    - Understands query meaning
+    - Finds conceptually related content
+    - Works with natural language
+    
+    **Best for:**
+    - Conceptual queries
+    - Finding related topics
+    - Natural language questions
+    
+    **Requires:**
+    - `BASIC_MEMORY_SEMANTIC_SEARCH_ENABLED=true`
+    - Additional dependencies installed
+  </Tab>
+  
+  <Tab title="Hybrid Search">
+    Combines text and semantic search:
+    
+    ```python
+    search_notes("authentication security", search_type="hybrid")
+    ```
+    
+    **Features:**
+    - Best of both approaches
+    - Precise keyword matching + conceptual understanding
+    - Automatic result fusion
+    
+    **Best for:**
+    - Most general searches
+    - Balanced precision and recall
+    - Unknown query types
+  </Tab>
+  
+  <Tab title="Title Search">
+    Search only in note titles:
+    
+    ```python
+    search_notes("Authentication", search_type="title")
+    ```
+    
+    **Best for:**
+    - Finding specific notes by name
+    - Quick navigation
+    - When you remember the title
+  </Tab>
+  
+  <Tab title="Permalink Search">
+    Search by file path or permalink:
+    
+    ```python
+    search_notes("docs/api/*", search_type="permalink")
+    ```
+    
+    **Features:**
+    - Pattern matching with `*`
+    - Exact permalink lookup
+    - Path-based filtering
+    
+    **Best for:**
+    - Finding notes by location
+    - Bulk operations on folders
+    - Path pattern matching
+  </Tab>
+</Tabs>
+
+## Boolean Search
+
+Use boolean operators for precise queries:
+
+### AND Operator
+
+Find notes containing all terms:
+
+```
+search_notes("coffee AND brewing")
+search_notes("authentication AND security AND jwt")
+```
+
+### OR Operator
+
+Find notes containing any term:
+
+```
+search_notes("meeting OR discussion")
+search_notes("redis OR memcached OR cache")
+```
+
+### NOT Operator
+
+Exclude terms from results:
+
+```
+search_notes("project NOT archived")
+search_notes("database NOT mongodb")
+```
+
+### Grouping
+
+Combine operators with parentheses:
+
+```
+search_notes("(coffee OR tea) AND brewing")
+search_notes("(bug OR issue) AND NOT resolved")
+search_notes("(api OR endpoint) AND (auth OR authentication)")
+```
+
+## Phrase Search
+
+Use quotes for exact phrase matching:
+
+```
+search_notes('"weekly standup meeting"')
+search_notes('"pour over coffee"')
+search_notes('"technical debt"')
+```
+
+## Advanced Filters
+
+### Filter by Tags
+
+Search within specific tags:
+
+```python
+search_notes("architecture", tags=["security"])
+search_notes("design", tags=["api", "rest"])
+```
+
+### Filter by Note Type
+
+Search specific note types:
+
+```python
+search_notes("meeting", note_types=["meeting"])
+search_notes("paul", note_types=["person"])
+search_notes("project", note_types=["note", "project"])
+```
+
+### Filter by Entity Type
+
+Search specific entity types:
+
+```python
+search_notes("performance", entity_types=["observation"])
+search_notes("related", entity_types=["relation"])
+```
+
+### Filter by Date
+
+Find recent or date-range content:
+
+<CodeGroup>
+```python Relative Dates
+search_notes("bug", after_date="1 week")
+search_notes("meeting", after_date="3 days")
+search_notes("decision", after_date="1 month")
+```
+
+```python Absolute Dates
+search_notes("report", after_date="2024-01-01")
+search_notes("project", after_date="2024-06-15")
+```
+</CodeGroup>
+
+### Filter by Status
+
+Filter by frontmatter status field:
+
+```python
+search_notes("task", status="in-progress")
+search_notes("project", status="active")
+```
+
+### Custom Metadata Filters
+
+Filter using custom frontmatter fields:
+
+<CodeGroup>
+```python Simple Equality
+search_notes(
+    "api",
+    metadata_filters={"priority": "high"}
+)
+```
+
+```python Multiple Filters
+search_notes(
+    "feature",
+    metadata_filters={
+        "status": "in-progress",
+        "assignee": "alice"
+    }
+)
+```
+
+```python Operators
+# $in operator - match any value
+search_notes(
+    "bug",
+    metadata_filters={
+        "priority": {"$in": ["high", "critical"]}
+    }
+)
+
+# Comparison operators
+search_notes(
+    "task",
+    metadata_filters={
+        "confidence": {"$gt": 0.7}
+    }
+)
+
+# Range queries
+search_notes(
+    "experiment",
+    metadata_filters={
+        "score": {"$between": [0.3, 0.6]}
+    }
+)
+```
+</CodeGroup>
+
+### Combining Filters
+
+Combine multiple filters for precise results:
+
+```python
+search_notes(
+    "authentication",
+    note_types=["note", "technical"],
+    tags=["security"],
+    after_date="1 month",
+    metadata_filters={"status": "active"}
+)
+```
+
+## Filter-Only Search
+
+You can search using only filters without a text query:
+
+```python
+# All notes with specific tag
+search_notes(tags=["security"])
+
+# All notes with specific status
+search_notes(status="in-progress")
+
+# All recent notes of specific type
+search_notes(
+    note_types=["meeting"],
+    after_date="1 week"
+)
+
+# Complex filter-only query
+search_notes(
+    metadata_filters={"priority": "high"},
+    tags=["urgent"],
+    after_date="3 days"
+)
+```
+
+## Pagination
+
+Control result pagination:
+
+```python
+# First page (default)
+search_notes("coffee", page=1, page_size=10)
+
+# Next page
+search_notes("coffee", page=2, page_size=10)
+
+# Larger page size
+search_notes("coffee", page=1, page_size=50)
+```
+
+## Pattern Matching
+
+### Permalink Patterns
+
+Use wildcards in permalink search:
+
+```
+# All notes in a directory
+search_notes("docs/*", search_type="permalink")
+
+# Nested pattern
+search_notes("projects/*/requirements", search_type="permalink")
+
+# Prefix match
+search_notes("auth*", search_type="permalink")
+
+# Suffix match
+search_notes("*/2024", search_type="permalink")
+```
+
+### Content Patterns
+
+Use special patterns in text search:
+
+```
+# Tag search (FTS mode)
+search_notes("tag:security", search_type="text")
+
+# Category search
+search_notes("category:decision", search_type="text")
+```
+
+## Discovery Tools
+
+### Recent Activity
+
+Find recently updated content:
+
+```python
+# Last week's updates
+recent_activity(timeframe="7d")
+
+# Last 24 hours
+recent_activity(timeframe="24h")
+
+# Natural language
+recent_activity(timeframe="last week")
+recent_activity(timeframe="3 days ago")
+```
+
+### Browse Directories
+
+Explore content by location:
+
+```python
+# List root directory
+list_directory("/")
+
+# List specific folder
+list_directory("/docs")
+
+# With depth
+list_directory("/projects", depth=2)
+
+# Filter by pattern
+list_directory("/notes", file_name_glob="*.md")
+```
+
+### Build Context
+
+Navigate the knowledge graph:
+
+```python
+# Get context for a topic
+build_context("memory://specs/search")
+
+# With depth (follow more relations)
+build_context("memory://architecture/auth", depth=2)
+
+# Recent context only
+build_context(
+    "memory://project/planning",
+    timeframe="1 week"
+)
+```
+
+## Example Workflows
+
+### Finding Meeting Notes
+
+<Steps>
+  <Step title="Search by Type">
+    ```python
+    search_notes(note_types=["meeting"])
+    ```
+  </Step>
+  
+  <Step title="Filter by Date">
+    ```python
+    search_notes(
+        note_types=["meeting"],
+        after_date="1 week"
+    )
+    ```
+  </Step>
+  
+  <Step title="Add Text Filter">
+    ```python
+    search_notes(
+        "authentication",
+        note_types=["meeting"],
+        after_date="1 week"
+    )
+    ```
+  </Step>
+</Steps>
+
+### Finding Technical Decisions
+
+<Steps>
+  <Step title="Search by Category">
+    ```python
+    search_notes("category:decision")
+    ```
+  </Step>
+  
+  <Step title="Add Topic">
+    ```python
+    search_notes("database category:decision")
+    ```
+  </Step>
+  
+  <Step title="Filter by Tag">
+    ```python
+    search_notes(
+        "database category:decision",
+        tags=["architecture"]
+    )
+    ```
+  </Step>
+</Steps>
+
+### Finding Related Content
+
+<Steps>
+  <Step title="Start with Build Context">
+    ```python
+    build_context("memory://authentication-system")
+    ```
+  </Step>
+  
+  <Step title="Search Related Topics">
+    ```python
+    search_notes("jwt OR token OR auth")
+    ```
+  </Step>
+  
+  <Step title="Check Recent Changes">
+    ```python
+    search_notes(
+        "authentication",
+        after_date="1 week"
+    )
+    ```
+  </Step>
+</Steps>
+
+## Search Tips
+
+<AccordionGroup>
+  <Accordion title="Start broad, then narrow">
+    Begin with a general query, then add filters:
+    
+    ```python
+    # Start broad
+    search_notes("performance")
+    
+    # Add filters
+    search_notes("performance", tags=["optimization"])
+    
+    # Narrow further
+    search_notes(
+        "performance",
+        tags=["optimization"],
+        after_date="1 month"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use OR for exploratory search">
+    Find related concepts with OR:
+    
+    ```python
+    search_notes("cache OR caching OR cached")
+    search_notes("meeting OR discussion OR standup")
+    ```
+  </Accordion>
+  
+  <Accordion title="Combine search with context">
+    Use search to find starting points, then build context:
+    
+    ```python
+    # Find starting point
+    results = search_notes("authentication")
+    
+    # Build context from result
+    context = build_context(f"memory://{results[0].permalink}")
+    ```
+  </Accordion>
+  
+  <Accordion title="Use recent_activity for discovery">
+    When you don't know what to search for:
+    
+    ```python
+    # See what's been updated
+    recent_activity(timeframe="7d")
+    
+    # Then search based on what you find
+    search_notes("specific topic from recent activity")
+    ```
+  </Accordion>
+  
+  <Accordion title="Leverage directory structure">
+    Organize notes hierarchically and search within folders:
+    
+    ```python
+    # Search specific area
+    search_notes("docs/architecture/*", search_type="permalink")
+    
+    # Then search content within
+    search_notes(
+        "authentication",
+        note_types=["note"],
+        # Use metadata filter for path if available
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="No results found">
+    Try these strategies:
+    
+    1. **Broaden your search**
+       ```python
+       # Instead of
+       search_notes("specific long phrase")
+       # Try
+       search_notes("specific OR phrase")
+       ```
+    
+    2. **Check spelling**
+       ```python
+       # Try variations
+       search_notes("authentication OR authentification")
+       ```
+    
+    3. **Use different search type**
+       ```python
+       # Try semantic instead of text
+       search_notes("concept", search_type="semantic")
+       ```
+    
+    4. **Remove filters**
+       ```python
+       # Temporarily remove date/type filters
+       search_notes("query")  # without filters
+       ```
+  </Accordion>
+  
+  <Accordion title="Too many results">
+    Narrow results with filters:
+    
+    ```python
+    # Add date filter
+    search_notes("query", after_date="1 month")
+    
+    # Add type filter
+    search_notes("query", note_types=["note"])
+    
+    # Use AND instead of OR
+    search_notes("term1 AND term2")  # more restrictive
+    ```
+  </Accordion>
+  
+  <Accordion title="Syntax errors">
+    Common issues:
+    
+    1. **Unmatched quotes**
+       ```python
+       # Wrong
+       search_notes('"incomplete quote')
+       # Right
+       search_notes('"complete quote"')
+       ```
+    
+    2. **Invalid operators**
+       ```python
+       # Wrong
+       search_notes("term1 & term2")
+       # Right
+       search_notes("term1 AND term2")
+       ```
+    
+    3. **Special characters**
+       ```python
+       # Avoid
+       search_notes("term+with*specials")
+       # Use simple terms
+       search_notes("term with specials")
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Notes" icon="pen" href="/guides/writing-notes">
+    Learn how to write searchable notes
+  </Card>
+  
+  <Card title="Managing Projects" icon="folder" href="/guides/projects">
+    Organize search across multiple projects
+  </Card>
+  
+  <Card title="Building Context" icon="diagram-project" href="/guides/visualization">
+    Navigate your knowledge graph
+  </Card>
+  
+  <Card title="Search API Reference" icon="code" href="/api/mcp/search">
+    Complete search API documentation
+  </Card>
+</CardGroup>

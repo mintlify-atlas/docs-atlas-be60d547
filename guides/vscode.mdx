@@ -1,0 +1,448 @@
+---
+title: 'Using with VS Code'
+description: 'Set up and use Basic Memory with VS Code for AI-assisted development'
+icon: 'code'
+---
+
+## Overview
+
+Basic Memory integrates with VS Code through the Model Context Protocol (MCP), allowing AI assistants in VS Code to access and manage your knowledge base while you code. This is particularly useful for:
+
+- Documenting code decisions and architecture
+- Maintaining project-specific knowledge
+- Building context for code reviews
+- Tracking technical debt and TODOs
+- Capturing meeting notes and decisions
+
+## Prerequisites
+
+- VS Code with MCP support (requires compatible AI extension)
+- Basic Memory installed on your system
+
+## Installation
+
+<Steps>
+  <Step title="Install Basic Memory">
+    Install Basic Memory using uv (recommended):
+    
+    ```bash
+    uv tool install basic-memory
+    ```
+    
+    Alternatively, use pip:
+    
+    ```bash
+    pip install basic-memory
+    ```
+  </Step>
+
+  <Step title="Choose Configuration Method">
+    You can configure Basic Memory for VS Code in two ways:
+    
+    - **User Settings** - Available across all workspaces
+    - **Workspace Settings** - Specific to a project, can be shared with team
+  </Step>
+</Steps>
+
+## Configuration
+
+<Tabs>
+  <Tab title="User Settings">
+    Configure Basic Memory globally for all VS Code workspaces.
+    
+    <Steps>
+      <Step title="Open User Settings (JSON)">
+        Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and type:
+        
+        ```
+        Preferences: Open User Settings (JSON)
+        ```
+      </Step>
+      
+      <Step title="Add MCP Configuration">
+        Add this configuration to your user settings:
+        
+        ```json
+        {
+          "mcp": {
+            "servers": {
+              "basic-memory": {
+                "command": "uvx",
+                "args": ["basic-memory", "mcp"]
+              }
+            }
+          }
+        }
+        ```
+        
+        <Note>
+          If you installed with pip instead of uv, use `"command": "basic-memory"` and `"args": ["mcp"]`
+        </Note>
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Workspace Settings">
+    Configure Basic Memory for a specific project workspace. This is useful for:
+    
+    - Sharing configuration with team members
+    - Using project-specific Basic Memory projects
+    - Version controlling the configuration
+    
+    <Steps>
+      <Step title="Create .vscode Directory">
+        In your project root, create a `.vscode` directory if it doesn't exist:
+        
+        ```bash
+        mkdir -p .vscode
+        ```
+      </Step>
+      
+      <Step title="Create mcp.json File">
+        Create a file at `.vscode/mcp.json` with this content:
+        
+        ```json
+        {
+          "servers": {
+            "basic-memory": {
+              "command": "uvx",
+              "args": ["basic-memory", "mcp"]
+            }
+          }
+        }
+        ```
+      </Step>
+      
+      <Step title="Commit Configuration (Optional)">
+        Add the configuration to version control to share with your team:
+        
+        ```bash
+        git add .vscode/mcp.json
+        git commit -m "Add Basic Memory MCP configuration"
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Project-Specific">
+    Configure VS Code to use a specific Basic Memory project:
+    
+    ```json
+    {
+      "servers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": [
+            "basic-memory",
+            "mcp",
+            "--project",
+            "your-project-name"
+          ]
+        }
+      }
+    }
+    ```
+    
+    <Tip>
+      This is especially useful when working on multiple projects. You can have different `.vscode/mcp.json` files in each repository.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Starting the Sync Process
+
+For real-time synchronization between files and the database, run:
+
+```bash
+# One-time sync
+basic-memory sync
+
+# Real-time sync (recommended)
+basic-memory sync --watch
+```
+
+<Tip>
+  Run `basic-memory sync --watch` in a VS Code terminal to keep it running while you work.
+</Tip>
+
+## Usage Examples
+
+### Documenting Architecture Decisions
+
+```
+You: Create a note documenting our decision to use SQLite for
+local storage instead of a full PostgreSQL setup.
+
+AI: [Uses write_note to create architecture decision record]
+```
+
+### Retrieving Context During Code Review
+
+```
+You: What was our rationale for the async client pattern?
+
+AI: [Uses build_context to load related architecture notes]
+Based on your architecture notes, the async client pattern was
+chosen because...
+```
+
+### Tracking Technical Debt
+
+```
+You: Add a note about the authentication refactor we need to do
+
+AI: [Creates note with technical debt observations and relations
+to affected components]
+```
+
+### Searching Documentation
+
+```
+You: Find all notes about database migrations
+
+AI: [Uses search_notes with relevant filters]
+I found 5 notes about database migrations...
+```
+
+## Development Workflows
+
+### Code Documentation Workflow
+
+<Steps>
+  <Step title="Write Code">
+    Develop features as usual in VS Code
+  </Step>
+  
+  <Step title="Document Decisions">
+    Ask the AI to create notes about important design decisions:
+    
+    ```
+    "Create a note about why we chose this caching strategy"
+    ```
+  </Step>
+  
+  <Step title="Link Related Concepts">
+    Build connections between related notes:
+    
+    ```
+    "Link this note to our performance optimization notes"
+    ```
+  </Step>
+  
+  <Step title="Review and Refine">
+    Open the notes in your file browser or Obsidian to review and enhance
+  </Step>
+</Steps>
+
+### Meeting Notes Workflow
+
+<Steps>
+  <Step title="Start Meeting">
+    Open VS Code before or during the meeting
+  </Step>
+  
+  <Step title="Capture Notes">
+    Ask AI to create structured meeting notes:
+    
+    ```
+    "Create a meeting note for today's sprint planning with attendees,
+    decisions, and action items"
+    ```
+  </Step>
+  
+  <Step title="Link to Relevant Code">
+    Connect meeting decisions to code:
+    
+    ```
+    "Link this decision to the authentication module"
+    ```
+  </Step>
+</Steps>
+
+## Available Tools
+
+The AI assistant in VS Code has access to all Basic Memory tools:
+
+<CardGroup cols={2}>
+  <Card title="write_note" icon="pen-to-square">
+    Create notes with observations and relations
+  </Card>
+  
+  <Card title="read_note" icon="book-open">
+    Read notes by title or permalink
+  </Card>
+  
+  <Card title="search_notes" icon="magnifying-glass">
+    Full-text search across knowledge base
+  </Card>
+  
+  <Card title="build_context" icon="diagram-project">
+    Navigate the knowledge graph
+  </Card>
+  
+  <Card title="recent_activity" icon="clock">
+    See recently updated content
+  </Card>
+  
+  <Card title="list_directory" icon="folder-tree">
+    Browse project directories
+  </Card>
+  
+  <Card title="edit_note" icon="pencil">
+    Make incremental edits to notes
+  </Card>
+  
+  <Card title="canvas" icon="diagram-nested">
+    Create visual knowledge maps
+  </Card>
+</CardGroup>
+
+## Viewing Your Notes
+
+Notes are stored as Markdown files and can be viewed in:
+
+<Tabs>
+  <Tab title="VS Code">
+    Open notes directly in VS Code:
+    
+    ```bash
+    # Open project directory
+    code ~/basic-memory
+    
+    # Or open specific note
+    code ~/basic-memory/notes/my-note.md
+    ```
+    
+    VS Code's built-in Markdown preview works great for viewing notes.
+  </Tab>
+  
+  <Tab title="Obsidian">
+    Open your Basic Memory project directory in Obsidian for:
+    
+    - Rich graph view visualization
+    - Advanced linking and backlinks
+    - Canvas support
+    - Plugin ecosystem
+    
+    In Obsidian: **File → Open vault → Choose basic-memory directory**
+  </Tab>
+  
+  <Tab title="Command Line">
+    View notes with any terminal tool:
+    
+    ```bash
+    # List all notes
+    ls ~/basic-memory
+    
+    # View a note
+    cat ~/basic-memory/notes/my-note.md
+    
+    # Search notes
+    grep -r "search term" ~/basic-memory
+    ```
+  </Tab>
+</Tabs>
+
+## Tips for VS Code Users
+
+<AccordionGroup>
+  <Accordion title="Use Workspace-Specific Projects">
+    Create a Basic Memory project for each code repository:
+    
+    ```bash
+    basic-memory project add "my-app" ~/code/my-app/docs
+    ```
+    
+    Then configure `.vscode/mcp.json` to use that project:
+    
+    ```json
+    {
+      "servers": {
+        "basic-memory": {
+          "command": "uvx",
+          "args": ["basic-memory", "mcp", "--project", "my-app"]
+        }
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Integrate with Git">
+    Track your knowledge base with git:
+    
+    ```bash
+    cd ~/basic-memory
+    git init
+    git add .
+    git commit -m "Initial knowledge base"
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Markdown Extensions">
+    Install VS Code Markdown extensions for better note editing:
+    
+    - Markdown All in One
+    - Markdown Preview Enhanced
+    - Markdown Links
+  </Accordion>
+  
+  <Accordion title="Create Custom Snippets">
+    Create VS Code snippets for common note patterns:
+    
+    ```json
+    {
+      "Basic Memory Observation": {
+        "prefix": "obs",
+        "body": ["- [$1] $2"]
+      },
+      "Basic Memory Relation": {
+        "prefix": "rel",
+        "body": ["- $1 [[$2]]"]
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MCP server not connecting">
+    1. Verify Basic Memory is installed: `basic-memory --version`
+    2. Check your MCP configuration syntax in settings
+    3. Restart VS Code
+    4. Check VS Code's Output panel for MCP errors
+  </Accordion>
+  
+  <Accordion title="Permission errors">
+    1. Ensure Basic Memory has write access to the project directory
+    2. Check file ownership: `ls -la ~/basic-memory`
+    3. Fix permissions if needed: `chmod -R u+rw ~/basic-memory`
+  </Accordion>
+  
+  <Accordion title="Sync not working">
+    1. Verify sync is running: `basic-memory status`
+    2. Check for errors: `basic-memory doctor`
+    3. Manually sync: `basic-memory sync`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Effective Notes" icon="pen" href="/guides/writing-notes">
+    Learn note format and best practices
+  </Card>
+  
+  <Card title="Search Techniques" icon="magnifying-glass" href="/guides/searching">
+    Master search and discovery features
+  </Card>
+  
+  <Card title="Project Management" icon="folder" href="/guides/projects">
+    Organize knowledge with multiple projects
+  </Card>
+  
+  <Card title="Visualization" icon="diagram-project" href="/guides/visualization">
+    Create visual knowledge maps
+  </Card>
+</CardGroup>

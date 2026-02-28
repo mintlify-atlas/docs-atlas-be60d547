@@ -1,0 +1,506 @@
+---
+title: "Content Management Tools"
+description: "MCP tools for creating, reading, updating, and deleting markdown notes"
+---
+
+## write_note
+
+Create a markdown note with semantic observations and relations.
+
+```python
+async def write_note(
+    title: str,
+    content: str,
+    directory: str,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    tags: list[str] | str | None = None,
+    note_type: str = "note",
+    metadata: dict | None = None,
+    overwrite: bool | None = None,
+    output_format: Literal["text", "json"] = "text",
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="title" type="string" required>
+  The title of the note
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  Markdown content for the note. Can include observations and relations using markdown syntax:
+  
+  **Observations format:**
+  ```markdown
+  - [category] Observation text #tag1 #tag2 (optional context)
+  ```
+  
+  **Relations format:**
+  ```markdown
+  - relation_type [[Entity]] (optional context)
+  ```
+</ParamField>
+
+<ParamField path="directory" type="string" required>
+  Directory path relative to project root. Use forward slashes (/) as separators.
+  Use "/" or "" for project root.
+  Examples: "notes", "projects/2025", "research/ml"
+</ParamField>
+
+<ParamField path="project" type="string">
+  Project name to write to. Optional - server resolves using hierarchy.
+</ParamField>
+
+<ParamField path="workspace" type="string">
+  Cloud workspace name or tenant_id
+</ParamField>
+
+<ParamField path="tags" type="list[string] | string">
+  Tags to categorize the note. Can be a list of strings or comma-separated string.
+</ParamField>
+
+<ParamField path="note_type" type="string" default="note">
+  Type of note to create. Examples: "guide", "report", "config", "person"
+</ParamField>
+
+<ParamField path="metadata" type="dict">
+  Optional extra frontmatter fields. Nested dicts are supported.
+</ParamField>
+
+<ParamField path="overwrite" type="boolean">
+  If True, replace existing note on conflict. If None, uses config default.
+</ParamField>
+
+<ParamField path="output_format" type="string" default="text">
+  "text" returns markdown summary. "json" returns machine-readable metadata.
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string | dict">
+  A markdown formatted summary or JSON object with:
+  - Creation/update status with project name
+  - File path and checksum
+  - Observation counts by category
+  - Relation counts (resolved/unresolved)
+  - Tags if present
+</ResponseField>
+
+### Examples
+
+```python
+# Create a simple note
+write_note(
+    title="Meeting Notes",
+    directory="meetings",
+    content="# Weekly Standup\\n\\n- [decision] Use SQLite for storage #tech"
+)
+
+# Create with tags and note type
+write_note(
+    project="work-project",
+    title="API Design",
+    directory="specs",
+    content="# REST API Specification\\n\\n- implements [[Authentication]]",
+    tags=["api", "design"],
+    note_type="guide"
+)
+
+# Create schema note with custom metadata
+write_note(
+    title="Person",
+    directory="schemas",
+    note_type="schema",
+    content="# Person\\n\\nSchema for person entities.",
+    metadata={
+        "entity": "person",
+        "version": 1,
+        "schema": {"name": "string", "role?": "string"},
+    }
+)
+```
+
+---
+
+## read_note
+
+Read a markdown note by title or permalink.
+
+```python
+async def read_note(
+    identifier: str,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+    output_format: Literal["text", "json"] = "text",
+    include_frontmatter: bool = False,
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="identifier" type="string" required>
+  The title, permalink, or memory:// URL of the note to read.
+  Can be:
+  - Full memory:// URL: `memory://folder/note`
+  - Permalink: `folder/note`
+  - Title: `My Note Title`
+</ParamField>
+
+<ParamField path="project" type="string">
+  Project name to read from. Optional - server resolves using hierarchy.
+</ParamField>
+
+<ParamField path="page" type="integer" default="1">
+  Page number for paginated results
+</ParamField>
+
+<ParamField path="page_size" type="integer" default="10">
+  Number of items per page
+</ParamField>
+
+<ParamField path="output_format" type="string" default="text">
+  "text" returns markdown content. "json" returns structured object.
+</ParamField>
+
+<ParamField path="include_frontmatter" type="boolean" default="false">
+  When output_format="json", whether content should include YAML frontmatter.
+</ParamField>
+
+### Returns
+
+<ResponseField name="content" type="string | dict">
+  The full markdown content of the note if found, or helpful guidance if not found.
+  
+  JSON format includes:
+  - `title` - Note title
+  - `permalink` - Note permalink
+  - `file_path` - File system path
+  - `content` - Markdown content
+  - `frontmatter` - Parsed YAML frontmatter (if present)
+</ResponseField>
+
+### Examples
+
+```python
+# Read by permalink
+read_note("specs/search-spec")
+
+# Read by title
+read_note("Search Specification")
+
+# Read with memory URL
+read_note("memory://specs/search-spec")
+
+# Read with pagination
+read_note("Project Updates", page=2, page_size=5)
+```
+
+---
+
+## edit_note
+
+Edit an existing markdown note using various operations.
+
+```python
+async def edit_note(
+    identifier: str,
+    operation: str,
+    content: str,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    section: Optional[str] = None,
+    find_text: Optional[str] = None,
+    expected_replacements: Optional[int] = None,
+    output_format: Literal["text", "json"] = "text",
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="identifier" type="string" required>
+  The exact title, permalink, or memory:// URL of the note to edit.
+  Must be an exact match - fuzzy matching is not supported.
+</ParamField>
+
+<ParamField path="operation" type="string" required>
+  The editing operation to perform:
+  - `append` - Add content to the end (creates note if doesn't exist)
+  - `prepend` - Add content to the beginning (creates note if doesn't exist)
+  - `find_replace` - Replace occurrences of find_text (note must exist)
+  - `replace_section` - Replace content under a markdown header (note must exist)
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  The content to add or use for replacement
+</ParamField>
+
+<ParamField path="section" type="string">
+  For `replace_section` - the markdown header to replace content under (e.g., "## Notes")
+</ParamField>
+
+<ParamField path="find_text" type="string">
+  For `find_replace` - the text to find and replace
+</ParamField>
+
+<ParamField path="expected_replacements" type="integer" default="1">
+  For `find_replace` - expected number of replacements (validation fails if mismatch)
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string | dict">
+  A markdown formatted summary of the edit operation including:
+  - Operation details
+  - File path and checksum
+  - Observations and relations counts
+  - Whether file was created (for append/prepend)
+</ResponseField>
+
+### Examples
+
+```python
+# Append content
+edit_note(
+    "project-planning",
+    "append",
+    "\\n## New Requirements\\n- Feature X\\n- Feature Y"
+)
+
+# Update version number
+edit_note(
+    "config-spec",
+    "find_replace",
+    "v0.13.0",
+    find_text="v0.12.0"
+)
+
+# Replace section
+edit_note(
+    "api-spec",
+    "replace_section",
+    "New implementation approach...\\n",
+    section="## Implementation"
+)
+```
+
+---
+
+## delete_note
+
+Delete a note or directory from the knowledge base.
+
+```python
+async def delete_note(
+    identifier: str,
+    is_directory: bool = False,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    output_format: Literal["text", "json"] = "text",
+    context: Context | None = None,
+) -> bool | str | dict
+```
+
+### Parameters
+
+<ParamField path="identifier" type="string" required>
+  For files: note title or permalink.
+  For directories: the directory path (e.g., "docs", "projects/2025")
+</ParamField>
+
+<ParamField path="is_directory" type="boolean" default="false">
+  If True, deletes an entire directory and all its contents.
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="boolean | string | dict">
+  - `True` if note was successfully deleted
+  - `False` if note was not found
+  - For directories: formatted summary of deleted files
+  - JSON format includes deletion metadata
+</ResponseField>
+
+### Examples
+
+```python
+# Delete by title
+delete_note("Meeting Notes: Project Planning")
+
+# Delete by permalink
+delete_note("notes/project-planning")
+
+# Delete entire directory
+delete_note("docs", is_directory=True)
+```
+
+---
+
+## move_note
+
+Move a note or directory to a new location.
+
+```python
+async def move_note(
+    identifier: str,
+    destination_path: str = "",
+    destination_folder: Optional[str] = None,
+    is_directory: bool = False,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    output_format: Literal["text", "json"] = "text",
+    context: Context | None = None,
+) -> str | dict
+```
+
+### Parameters
+
+<ParamField path="identifier" type="string" required>
+  For files: exact entity identifier (title, permalink, or memory:// URL).
+  For directories: the directory path
+</ParamField>
+
+<ParamField path="destination_path" type="string">
+  For files: new path relative to project root (e.g., "work/meetings/note.md")
+  For directories: new directory path (e.g., "archive/docs")
+  Mutually exclusive with destination_folder.
+</ParamField>
+
+<ParamField path="destination_folder" type="string">
+  Move the note into this folder, preserving the original filename.
+  Mutually exclusive with destination_path. Only for single-file moves.
+</ParamField>
+
+<ParamField path="is_directory" type="boolean" default="false">
+  If True, moves an entire directory and all its contents.
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string | dict">
+  Success message with move details.
+  For directories: count of files moved and any errors.
+</ResponseField>
+
+### Examples
+
+```python
+# Move to new folder with new name
+move_note("My Note", "work/notes/my-note.md")
+
+# Move to archive (filename preserved)
+move_note("my-note", destination_folder="archive")
+
+# Move entire directory
+move_note("docs", "archive/docs", is_directory=True)
+```
+
+---
+
+## read_content
+
+Read raw file content without knowledge graph processing.
+
+```python
+async def read_content(
+    path: str,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    context: Context | None = None,
+) -> dict
+```
+
+### Parameters
+
+<ParamField path="path" type="string" required>
+  The path or permalink to the file. Can be:
+  - Regular file path: `docs/example.md`
+  - Memory URL: `memory://docs/example`
+  - Permalink: `docs/example`
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="dict">
+  A dictionary with file content and metadata:
+  
+  **For text files:**
+  ```json
+  {
+    "type": "text",
+    "text": "content",
+    "content_type": "text/markdown",
+    "encoding": "utf-8"
+  }
+  ```
+  
+  **For images:**
+  ```json
+  {
+    "type": "image",
+    "source": {
+      "type": "base64",
+      "media_type": "image/jpeg",
+      "data": "base64_data"
+    }
+  }
+  ```
+</ResponseField>
+
+### Examples
+
+```python
+# Read markdown file
+read_content("docs/project-specs.md")
+
+# Read image
+read_content("assets/diagram.png")
+
+# Read using memory URL
+read_content("memory://docs/architecture")
+```
+
+---
+
+## view_note
+
+View a note as a formatted artifact for better readability.
+
+```python
+async def view_note(
+    identifier: str,
+    project: Optional[str] = None,
+    workspace: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+    context: Context | None = None,
+) -> str
+```
+
+### Parameters
+
+<ParamField path="identifier" type="string" required>
+  The title or permalink of the note to view
+</ParamField>
+
+### Returns
+
+<ResponseField name="result" type="string">
+  Instructions for Claude to create a markdown artifact with the note content.
+  Displays the note in a formatted, readable view in Claude Desktop.
+</ResponseField>
+
+### Examples
+
+```python
+# View by title
+view_note("Meeting Notes")
+
+# View by permalink
+view_note("meetings/weekly-standup")
+```

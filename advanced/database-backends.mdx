@@ -1,0 +1,394 @@
+---
+title: Database Backends
+description: SQLite vs PostgreSQL backend configuration and usage
+---
+
+Basic Memory supports two database backends: **SQLite** (default) and **PostgreSQL**. Both provide the same functionality through SQLAlchemy 2.0's async ORM.
+
+## Overview
+
+<CardGroup cols={2}>
+  <Card title="SQLite" icon="database">
+    **Default** - Single-file database, zero configuration
+  </Card>
+  <Card title="PostgreSQL" icon="elephant">
+    **Production** - Multi-user, cloud deployments, advanced features
+  </Card>
+</CardGroup>
+
+## SQLite (Default)
+
+SQLite is the default backend for local-first usage.
+
+### Features
+
+- **Zero configuration**: Works out of the box
+- **Single file**: Entire database in one `.db` file
+- **Serverless**: No daemon process required
+- **Fast**: Optimized for read-heavy workloads
+- **Portable**: Copy the file to move your data
+
+### Configuration
+
+```yaml
+# ~/.config/basic-memory/config.yaml
+database_backend: sqlite
+database_url: sqlite+aiosqlite:///{base_dir}/basic-memory.db
+```
+
+Or via environment variable:
+
+```bash
+export BASIC_MEMORY_DATABASE_BACKEND=sqlite
+export BASIC_MEMORY_DATABASE_URL="sqlite+aiosqlite:///~/basic-memory/basic-memory.db"
+```
+
+### Performance Optimizations
+
+Basic Memory automatically applies these SQLite optimizations:
+
+```python
+# WAL mode for concurrent read/write
+PRAGMA journal_mode=WAL
+
+# In-memory temp tables
+PRAGMA temp_store=memory
+
+# Faster synchronization
+PRAGMA synchronous=NORMAL
+
+# Optimize for multi-threaded access
+PRAGMA locking_mode=NORMAL  # Windows: EXCLUSIVE
+```
+
+<Info>
+On **Windows**, Basic Memory uses `locking_mode=EXCLUSIVE` and `NullPool` to avoid file locking issues with concurrent access.
+</Info>
+
+### Full-Text Search
+
+SQLite uses FTS5 for full-text search:
+
+```sql
+CREATE VIRTUAL TABLE entity_fts USING fts5(
+    title,
+    content,
+    content=entity,
+    content_rowid=id
+);
+```
+
+**Boolean operators supported**:
+
+- `term1 AND term2` - Both terms must appear
+- `term1 OR term2` - Either term can appear
+- `NOT term` - Exclude term
+- `"exact phrase"` - Phrase search
+
+### Vector Search (Optional)
+
+With `semantic_search_enabled=true`, SQLite uses `sqlite-vec` for vector similarity:
+
+```python
+# Install sqlite-vec extension
+import sqlite_vec
+
+# Create vector index
+CREATE VIRTUAL TABLE vec_items USING vec0(
+    embedding float[384]  # fastembed default dimension
+);
+```
+
+## PostgreSQL
+
+PostgreSQL is recommended for:
+
+- Cloud deployments
+- Multi-user access
+- Advanced query features
+- Full-text search in multiple languages
+
+### Installation
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    brew install postgresql@16
+    brew services start postgresql@16
+    ```
+  </Tab>
+  <Tab title="Ubuntu/Debian">
+    ```bash
+    sudo apt-get install postgresql-16
+    sudo systemctl start postgresql
+    ```
+  </Tab>
+  <Tab title="Docker">
+    ```bash
+    docker run -d \
+      --name basic-memory-postgres \
+      -e POSTGRES_PASSWORD=your_password \
+      -e POSTGRES_DB=basic_memory \
+      -p 5432:5432 \
+      postgres:16
+    ```
+  </Tab>
+</Tabs>
+
+### Configuration
+
+```yaml
+# ~/.config/basic-memory/config.yaml
+database_backend: postgres
+database_url: postgresql+asyncpg://user:password@localhost:5432/basic_memory
+```
+
+Or via environment variable:
+
+```bash
+export BASIC_MEMORY_DATABASE_BACKEND=postgres
+export BASIC_MEMORY_DATABASE_URL="postgresql+asyncpg://user:password@localhost/basic_memory"
+```
+
+### Creating a Database
+
+```bash
+# Using psql
+psql -U postgres -c "CREATE DATABASE basic_memory;"
+
+# Grant permissions
+psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE basic_memory TO your_user;"
+```
+
+### Full-Text Search
+
+PostgreSQL uses `tsvector` and `GIN` index for full-text search:
+
+```sql
+CREATE INDEX entity_fts_idx ON entity 
+USING GIN(to_tsvector('english', title || ' ' || content));
+```
+
+**Advantages over SQLite FTS**:
+
+- Multi-language support (English, Spanish, French, etc.)
+- Stemming and ranking
+- Phrase search with `<->` operator
+- Better performance for large datasets
+
+### Vector Search (Optional)
+
+With `semantic_search_enabled=true`, PostgreSQL uses `pgvector` extension:
+
+```bash
+# Install pgvector extension
+psql -d basic_memory -c "CREATE EXTENSION vector;"
+```
+
+```sql
+-- Create vector column and index
+ALTER TABLE entity ADD COLUMN embedding vector(384);
+CREATE INDEX ON entity USING ivfflat (embedding vector_cosine_ops);
+```
+
+**pgvector advantages**:
+
+- Optimized vector operations
+- Multiple distance metrics (cosine, L2, inner product)
+- HNSW and IVFFlat indexes
+
+## Comparison
+
+| Feature | SQLite | PostgreSQL |
+|---------|--------|------------|
+| **Setup** | Zero config | Requires server |
+| **Performance (single-user)** | Faster | Good |
+| **Performance (multi-user)** | Limited | Excellent |
+| **Concurrent writes** | Sequential | Concurrent |
+| **Full-text search** | FTS5 | tsvector + GIN |
+| **Vector search** | sqlite-vec | pgvector |
+| **Cloud-ready** | Limited | Yes |
+| **Backup** | Copy file | pg_dump/pg_restore |
+| **Max database size** | 281 TB | Unlimited |
+| **Use case** | Local-first, single-user | Multi-user, cloud, production |
+
+## Switching Backends
+
+<Warning>
+Switching backends requires re-importing your data. Basic Memory does not provide automatic migration between backends.
+</Warning>
+
+<Steps>
+  <Step title="Export your data">
+    ```bash
+    # Export to Memory JSON format
+    bm export memory-json > backup.jsonl
+    ```
+  </Step>
+  <Step title="Update configuration">
+    ```yaml
+    # Change database_backend and database_url
+    database_backend: postgres
+    database_url: postgresql+asyncpg://user:pass@localhost/basic_memory
+    ```
+  </Step>
+  <Step title="Run migrations">
+    Migrations run automatically on first startup
+  </Step>
+  <Step title="Re-import data">
+    ```bash
+    bm import memory-json < backup.jsonl
+    bm sync
+    ```
+  </Step>
+</Steps>
+
+## Testing with Both Backends
+
+Developers can test against both backends:
+
+```bash
+# Test with SQLite (default)
+just test-sqlite
+
+# Test with PostgreSQL (uses testcontainers)
+just test-postgres
+
+# Test both
+just test
+```
+
+<Info>
+PostgreSQL tests use [testcontainers](https://testcontainers-python.readthedocs.io/) to automatically spin up a temporary PostgreSQL instance in Docker. No manual setup required.
+</Info>
+
+## Migrations
+
+Both backends use Alembic for schema migrations:
+
+```bash
+# Create a new migration
+just migration "Add new feature"
+
+# Migrations run automatically on startup
+bm status  # Triggers migration check
+```
+
+Migrations are stored in `src/basic_memory/alembic/versions/` and work with both SQLite and PostgreSQL.
+
+## Performance Tuning
+
+### SQLite
+
+```python
+# Increase cache size
+PRAGMA cache_size=-64000  # 64 MB
+
+# Optimize for read-heavy workloads
+PRAGMA query_only=OFF
+PRAGMA read_uncommitted=ON
+```
+
+### PostgreSQL
+
+```sql
+-- Increase shared buffers (25% of RAM)
+ALTER SYSTEM SET shared_buffers = '256MB';
+
+-- Optimize for SSD
+ALTER SYSTEM SET random_page_cost = 1.1;
+
+-- Reload configuration
+SELECT pg_reload_conf();
+```
+
+## Cloud Deployment
+
+For cloud deployments, use PostgreSQL:
+
+<Tabs>
+  <Tab title="Docker Compose">
+    ```yaml
+    version: '3.8'
+    services:
+      postgres:
+        image: postgres:16
+        environment:
+          POSTGRES_DB: basic_memory
+          POSTGRES_PASSWORD: ${DB_PASSWORD}
+        volumes:
+          - postgres_data:/var/lib/postgresql/data
+      
+      basic-memory:
+        image: basicmachines/basic-memory:latest
+        environment:
+          BASIC_MEMORY_DATABASE_BACKEND: postgres
+          BASIC_MEMORY_DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD}@postgres/basic_memory
+        depends_on:
+          - postgres
+    
+    volumes:
+      postgres_data:
+    ```
+  </Tab>
+  <Tab title="Managed PostgreSQL">
+    ```bash
+    # Use managed database (AWS RDS, Google Cloud SQL, etc.)
+    export BASIC_MEMORY_DATABASE_URL="postgresql+asyncpg://user:pass@db.example.com:5432/basic_memory"
+    
+    # Enable SSL
+    export BASIC_MEMORY_DATABASE_URL="postgresql+asyncpg://user:pass@db.example.com:5432/basic_memory?sslmode=require"
+    ```
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="SQLite: database is locked">
+    **Cause**: Multiple processes writing to the same SQLite file
+    
+    **Solution**: Enable WAL mode (default in Basic Memory) or use PostgreSQL for multi-user access
+  </Accordion>
+  
+  <Accordion title="PostgreSQL: connection refused">
+    **Cause**: PostgreSQL server not running
+    
+    **Solution**: Start the server:
+    ```bash
+    # macOS
+    brew services start postgresql@16
+    
+    # Linux
+    sudo systemctl start postgresql
+    ```
+  </Accordion>
+  
+  <Accordion title="Migration failed">
+    **Cause**: Schema out of sync
+    
+    **Solution**: Reset and re-run migrations:
+    ```bash
+    # SQLite: Delete database file
+    rm ~/.local/share/basic-memory/basic-memory.db
+    
+    # PostgreSQL: Drop and recreate
+    psql -c "DROP DATABASE basic_memory;"
+    psql -c "CREATE DATABASE basic_memory;"
+    
+    # Restart to run migrations
+    bm status
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Semantic Search" icon="magnifying-glass" href="/advanced/semantic-search">
+    Configure vector embeddings for semantic search
+  </Card>
+  <Card title="Development" icon="code" href="/advanced/development">
+    Set up your development environment
+  </Card>
+</CardGroup>

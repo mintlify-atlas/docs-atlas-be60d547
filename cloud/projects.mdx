@@ -1,0 +1,516 @@
+---
+title: Cloud Project Management
+description: Manage Basic Memory cloud projects, routing modes, and workspace configuration
+---
+
+## Overview
+
+Basic Memory supports multiple projects with flexible routing between local and cloud modes. Each project can be independently configured to:
+
+- Run entirely local (no cloud dependency)
+- Route CLI commands through the cloud API
+- Sync files bidirectionally with cloud storage
+- Use different cloud workspaces
+
+<Note>
+  MCP tools (via stdio transport) always use local routing, allowing simultaneous use of local Claude Desktop and cloud-based clients.
+</Note>
+
+## Project Concepts
+
+### Project Modes
+
+Each project has a **routing mode** that determines which API it uses:
+
+| Mode | CLI Routing | MCP (stdio) | File Storage | Requires Cloud |
+|------|-------------|-------------|--------------|----------------|
+| `LOCAL` | Local API | Local API | Local only | No |
+| `CLOUD` | Cloud API | Local API | Local + Cloud (synced) | Yes |
+
+### Project Paths
+
+- **Local path**: Where files are stored on your filesystem (`~/basic-memory/research`)
+- **Cloud path**: The project's path in cloud storage (`/research`)
+- **Sync path**: Local directory for bidirectional sync (can differ from local path)
+
+### Workspaces
+
+Cloud workspaces organize projects by tenant:
+
+- **Personal workspace**: Your individual account workspace
+- **Organization workspace**: Shared workspace for team collaboration
+
+Each workspace has its own projects and subscription.
+
+## Listing Projects
+
+View all local and cloud projects:
+
+```bash
+bm project list
+```
+
+**Example output:**
+```
+                    Basic Memory Projects                     
+┏━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━┓
+┃ Name    ┃ Local Path         ┃ Cloud Path  ┃ CLI Route ┃ Sync  ┃
+┡━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━┩
+│ main    │ ~/basic-memory     │             │ local     │       │
+│ research│ ~/docs/research    │ /research   │ cloud     │ ✓     │
+│ work    │ ~/work             │             │ local     │       │
+└─────────┴────────────────────┴─────────────┴───────────┴───────┘
+```
+
+### Filtering Output
+
+```bash
+# Show only local projects
+bm project list --local
+
+# Show only cloud projects
+bm project list --cloud
+
+# Show projects from specific workspace
+bm project list --workspace "Personal"
+
+# JSON output for scripting
+bm project list --json
+```
+
+## Creating Projects
+
+### Local Project
+
+Create a project that runs entirely local:
+
+```bash
+bm project add notes ~/Documents/notes
+```
+
+### Cloud Project with Sync
+
+Create a project with cloud routing and sync:
+
+```bash
+bm project add research --cloud --local-path ~/Documents/research
+```
+
+This command:
+1. Creates the project in the cloud
+2. Creates the project in local database
+3. Configures sync path
+4. Sets routing mode to cloud
+
+<Warning>
+  Cloud project creation requires authentication. Run `bm cloud login` first if you haven't already.
+</Warning>
+
+## Project Routing
+
+### Set Cloud Mode
+
+Route a project's CLI commands through the cloud API:
+
+```bash
+bm project set-cloud research
+```
+
+**What changes:**
+- CLI commands for this project use cloud API
+- Requires API key or OAuth authentication
+- Enables cloud features (search, stats, etc.)
+
+**What stays local:**
+- MCP tools (via stdio transport)
+- File storage (unless sync is configured)
+- Database (unless explicitly using cloud)
+
+### Set Local Mode
+
+Revert a project to local-only routing:
+
+```bash
+bm project set-local research
+```
+
+**What changes:**
+- CLI commands use local API
+- No cloud authentication required
+- Limited to local features
+
+### Routing Flags
+
+Override routing for a single command:
+
+```bash
+# Force local routing
+bm project info research --local
+
+# Force cloud routing  
+bm project info research --cloud
+```
+
+<Note>
+  Routing flags are useful for testing or when you want to query both local and cloud states.
+</Note>
+
+## Project Information
+
+Get detailed information about a project:
+
+```bash
+bm project info research
+```
+
+**Example output:**
+```
+Project: research
+  Path: ~/Documents/research
+  Mode: cloud
+  Entities: 1,247
+  Relations: 3,891
+  Last Modified: 2026-02-27 14:32:10
+  
+Sync Configuration:
+  Local Path: ~/Documents/research
+  Bisync Initialized: Yes
+  Last Sync: 2026-02-28 09:15:43
+```
+
+### Routing Status
+
+Check which API a project uses:
+
+```bash
+bm project list | grep research
+```
+
+Look at the "CLI Route" column:
+- `local` - Using local API
+- `cloud` - Using cloud API
+- `local (flag)` - Forced local via `--local` flag
+- `cloud (flag)` - Forced cloud via `--cloud` flag
+
+## Sync Configuration
+
+### Configure Sync for Existing Project
+
+Set up bidirectional sync for a project:
+
+```bash
+bm cloud sync-setup research ~/Documents/research
+```
+
+This:
+1. Verifies the project exists in the cloud
+2. Creates the local directory
+3. Updates project config with sync path
+4. Prepares for first bisync
+
+### View Sync Status
+
+```bash
+bm project info research
+```
+
+Look for:
+- **Bisync Initialized**: Whether baseline sync has been established
+- **Last Sync**: Timestamp of last successful sync
+- **Local Path**: Where files are stored locally
+
+### Remove Sync Configuration
+
+To stop syncing a project (keeps cloud and local data):
+
+```bash
+# Edit config manually
+vim ~/.basic-memory/config.yaml
+
+# Remove or modify the project's local_sync_path field
+```
+
+<Warning>
+  Removing sync configuration doesn't delete any files. It only stops future syncs. Files remain in both local and cloud.
+</Warning>
+
+## Default Project
+
+Set a project as the default for MCP operations:
+
+```bash
+bm project default research
+```
+
+The default project is used by MCP tools when no project is explicitly specified.
+
+### View Default Project
+
+```bash
+bm project info
+```
+
+Or look for the "Default" column in `bm project list` output.
+
+## Workspace Management
+
+<Note>
+  Workspaces are only relevant for cloud projects. Local projects don't use workspaces.
+</Note>
+
+### List Workspaces
+
+View available cloud workspaces:
+
+```bash
+bm cloud workspace list
+```
+
+**Example output:**
+```
+              Available Workspaces               
+┏━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━┓
+┃ Name        ┃ Type       ┃ Role  ┃ Tenant ID ┃ Default ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━┩
+│ Personal    │ personal   │ owner │ 11111...  │ [X]     │
+│ Acme Corp   │ org        │ admin │ 22222...  │         │
+└─────────────┴────────────┴───────┴───────────┴─────────┘
+```
+
+### Set Default Workspace
+
+```bash
+bm cloud workspace set-default "Personal"
+```
+
+Or use the tenant ID:
+
+```bash
+bm cloud workspace set-default 11111111-1111-1111-1111-111111111111
+```
+
+The default workspace is used when listing cloud projects without specifying `--workspace`.
+
+### Per-Command Workspace
+
+Query a specific workspace:
+
+```bash
+bm project list --cloud --workspace "Acme Corp"
+```
+
+## Multi-Device Workflows
+
+### Scenario: Desktop and Laptop
+
+**On Desktop:**
+```bash
+# Initial setup
+bm cloud login
+bm cloud setup
+bm project add research --cloud --local-path ~/Documents/research
+bm cloud bisync --name research --resync
+
+# Work on files...
+
+# Sync before stopping work
+bm cloud bisync --name research
+```
+
+**On Laptop:**
+```bash
+# Initial setup
+bm cloud login
+bm cloud setup
+bm cloud sync-setup research ~/Documents/research
+bm cloud bisync --name research --resync
+
+# Work on files...
+
+# Sync regularly
+bm cloud bisync --name research
+```
+
+### Scenario: Mixed Local and Cloud Projects
+
+```bash
+# Personal notes stay local-only
+bm project add notes ~/Documents/notes
+
+# Research syncs to cloud
+bm project add research --cloud --local-path ~/Documents/research
+bm project set-cloud research
+
+# Work projects stay local for now
+bm project add work ~/Documents/work
+
+# Later, enable cloud for work project
+bm project set-cloud work
+bm cloud sync-setup work ~/Documents/work
+```
+
+## Advanced Configuration
+
+### Manual Config Editing
+
+Project configuration lives in `~/.basic-memory/config.yaml`:
+
+```yaml
+default_project: research
+projects:
+  main:
+    path: /Users/you/basic-memory
+    mode: local
+    
+  research:
+    path: /Users/you/Documents/research
+    local_sync_path: /Users/you/Documents/research
+    mode: cloud
+    bisync_initialized: true
+    last_sync: '2026-02-28T09:15:43'
+```
+
+**Key fields:**
+- `path`: Local filesystem path
+- `local_sync_path`: Sync directory (can differ from path)
+- `mode`: Routing mode (`local` or `cloud`)
+- `bisync_initialized`: Whether baseline sync exists
+- `last_sync`: Timestamp of last successful sync
+
+### Environment Variables
+
+Control routing behavior:
+
+| Variable | Effect |
+|----------|--------|
+| `BASIC_MEMORY_FORCE_LOCAL=true` | Force local routing for all commands |
+| `BASIC_MEMORY_FORCE_CLOUD=true` | Force cloud routing for all commands |
+| `BASIC_MEMORY_EXPLICIT_ROUTING=true` | Mark routing as explicit |
+
+**Example:**
+```bash
+# Test local API while project is in cloud mode
+BASIC_MEMORY_FORCE_LOCAL=true bm status
+```
+
+## Snapshot Integration
+
+Cloud projects support snapshots for backup and rollback.
+
+### Create Snapshot
+
+Snapshot your project's cloud state:
+
+```bash
+bm cloud snapshot create "before major refactor"
+```
+
+### List Snapshots
+
+```bash
+bm cloud snapshot list
+```
+
+### Restore from Snapshot
+
+Restore specific files or entire project:
+
+```bash
+# Restore specific file
+bm cloud restore /research/notes/important.md --snapshot snap_abc123
+
+# Restore entire project directory
+bm cloud restore /research/ --snapshot snap_abc123
+```
+
+<Warning>
+  After restoring from a snapshot, run `bisync --resync` to establish a new baseline:
+  
+  ```bash
+  bm cloud bisync --name research --resync
+  ```
+</Warning>
+
+### Snapshot Best Practices
+
+- **Before major changes**: Create snapshot before refactoring or bulk edits
+- **Daily snapshots**: Automate daily snapshots via cron or scheduled task
+- **Pre-sync snapshots**: Snapshot before risky sync operations
+- **Descriptive names**: Use clear descriptions for easy identification
+
+## Troubleshooting
+
+### Project Not Found
+
+```bash
+# Verify project exists locally
+bm project list --local
+
+# Verify project exists in cloud
+bm cloud list --cloud
+
+# Re-create if missing
+bm project add myproject --cloud --local-path ~/path
+```
+
+### Cloud Routing Fails
+
+```bash
+# Check authentication
+bm cloud status
+
+# Verify API key is set (for cloud projects)
+bm cloud status
+
+# Re-authenticate if needed
+bm cloud login
+```
+
+### Sync Path Mismatch
+
+```bash
+# Check current configuration
+bm project info research
+
+# Reconfigure sync path
+bm cloud sync-setup research ~/correct/path
+```
+
+### Bisync State Issues
+
+```bash
+# Reset bisync state
+bm cloud bisync-reset research
+
+# Re-establish baseline
+bm cloud bisync --name research --resync
+```
+
+### Wrong Workspace
+
+```bash
+# List available workspaces
+bm cloud workspace list
+
+# Set correct default workspace
+bm cloud workspace set-default "Correct Workspace"
+
+# Or use --workspace flag
+bm project list --cloud --workspace "Correct Workspace"
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Bidirectional Sync" icon="arrows-rotate" href="/cloud/sync">
+    Learn about syncing files between local and cloud
+  </Card>
+  
+  <Card title="Authentication" icon="key" href="/cloud/authentication">
+    Set up cloud credentials and API keys
+  </Card>
+  
+  <Card title="CLI Reference" icon="terminal" href="/api/cli/overview">
+    Complete CLI command reference
+  </Card>
+</CardGroup>
