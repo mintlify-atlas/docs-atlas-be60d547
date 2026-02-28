@@ -1,0 +1,139 @@
+{
+  "projectType": "saas",
+  "projectName": "Basic Memory",
+  "projectDescription": "Local-first knowledge management with AI integration via Model Context Protocol",
+  "theme": "palm",
+  "primaryColor": "#8B5CF6",
+  "lightColor": "#A78BFA",
+  "darkColor": "#7C3AED",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/how-it-works",
+              "concepts/knowledge-graph",
+              "concepts/markdown-format",
+              "concepts/mcp-integration"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guides/claude-desktop",
+              "guides/vscode",
+              "guides/writing-notes",
+              "guides/searching",
+              "guides/projects",
+              "guides/visualization"
+            ]
+          },
+          {
+            "group": "Cloud Features",
+            "pages": [
+              "cloud/overview",
+              "cloud/authentication",
+              "cloud/sync",
+              "cloud/projects"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/architecture",
+              "advanced/database-backends",
+              "advanced/semantic-search",
+              "advanced/development",
+              "advanced/contributing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "MCP Tools",
+            "pages": [
+              "api/mcp/overview",
+              "api/mcp/content-management",
+              "api/mcp/knowledge-graph",
+              "api/mcp/search",
+              "api/mcp/projects",
+              "api/mcp/visualization"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": [
+              "api/cli/overview",
+              "api/cli/project-commands",
+              "api/cli/cloud-commands",
+              "api/cli/tool-commands",
+              "api/cli/import-commands"
+            ]
+          },
+          {
+            "group": "REST API",
+            "pages": [
+              "api/rest/overview",
+              "api/rest/authentication",
+              "api/rest/entities",
+              "api/rest/search",
+              "api/rest/projects"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Local-first Markdown knowledge base with bidirectional AI sync",
+    "Model Context Protocol (MCP) server for Claude and VS Code integration",
+    "Semantic search with vector embeddings and full-text search",
+    "Knowledge graph navigation with observations and relations",
+    "Cloud synchronization with subscription-based features",
+    "Multiple database backends (SQLite and PostgreSQL)",
+    "Obsidian-compatible markdown format with wiki links",
+    "CLI, MCP, and REST API interfaces"
+  ],
+  "publicApiSurface": [
+    "write_note",
+    "read_note",
+    "edit_note",
+    "delete_note",
+    "move_note",
+    "read_content",
+    "view_note",
+    "search_notes",
+    "search",
+    "build_context",
+    "recent_activity",
+    "list_directory",
+    "list_memory_projects",
+    "create_memory_project",
+    "delete_project",
+    "get_current_project",
+    "sync_status",
+    "cloud_info",
+    "canvas",
+    "basic-memory cli",
+    "basic-memory mcp",
+    "basic-memory sync",
+    "basic-memory cloud",
+    "basic-memory project",
+    "basic-memory tool",
+    "basic-memory import"
+  ]
+}
